@@ -1,16 +1,12 @@
 
 import { useRef } from "react";
 import { Button } from "./ui/button";
-
-interface Category {
-  id: string;
-  name: string;
-}
+import type { Category } from "@/types";
 
 interface CategoryNavProps {
   categories: Category[];
-  activeCategory: string;
-  onCategoryChange: (categoryId: string) => void;
+  activeCategory: number;
+  onCategoryChange: (categoryId: number) => void;
 }
 
 export const CategoryNav = ({ categories, activeCategory, onCategoryChange }: CategoryNavProps) => {
