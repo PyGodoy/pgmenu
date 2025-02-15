@@ -74,6 +74,27 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_admin: boolean
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          is_admin?: boolean
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_admin?: boolean
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       restaurants: {
         Row: {
           address: string
