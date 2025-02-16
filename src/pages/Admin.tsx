@@ -11,14 +11,29 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/components/ui/use-toast";
 import { MenuItem, Category } from '@/types';
+import { CategoryDialog } from '@/components/CategoryDialog';
 
 const Admin = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<Category | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -45,39 +60,78 @@ const Admin = () => {
     checkAuth();
   }, [navigate]);
 
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      // Fetch categories
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+
+      if (categoriesError) throw categoriesError;
+      setCategories(categoriesData);
+
+      // Fetch menu items
+      const { data: menuItemsData, error: menuItemsError } = await supabase
+        .from('menu_items')
+        .select('*, category:categories(name)')
+        .order('name');
+
+      if (menuItemsError) throw menuItemsError;
+      setMenuItems(menuItemsData);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao carregar dados",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch categories
-        const { data: categoriesData, error: categoriesError } = await supabase
-          .from('categories')
-          .select('*')
-          .order('name');
-
-        if (categoriesError) throw categoriesError;
-        setCategories(categoriesData);
-
-        // Fetch menu items
-        const { data: menuItemsData, error: menuItemsError } = await supabase
-          .from('menu_items')
-          .select('*, category:categories(name)')
-          .order('name');
-
-        if (menuItemsError) throw menuItemsError;
-        setMenuItems(menuItemsData);
-      } catch (error: any) {
-        toast({
-          title: "Erro ao carregar dados",
-          description: error.message,
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, [toast]);
+
+  const handleEditCategory = (category: Category) => {
+    setSelectedCategory(category);
+    setCategoryDialogOpen(true);
+  };
+
+  const handleDeleteCategory = async (category: Category) => {
+    setCategoryToDelete(category);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', categoryToDelete.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Categoria excluída com sucesso!",
+      });
+
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir categoria",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setCategoryToDelete(null);
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -107,7 +161,12 @@ const Admin = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <h2 className="text-2xl font-semibold">Categorias</h2>
-              <Button>Adicionar Categoria</Button>
+              <Button onClick={() => {
+                setSelectedCategory(undefined);
+                setCategoryDialogOpen(true);
+              }}>
+                Adicionar Categoria
+              </Button>
             </CardHeader>
             <CardContent>
               <Table>
@@ -124,10 +183,19 @@ const Admin = () => {
                       <TableCell>{category.name}</TableCell>
                       <TableCell>{category.slug}</TableCell>
                       <TableCell>
-                        <Button variant="outline" size="sm" className="mr-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mr-2"
+                          onClick={() => handleEditCategory(category)}
+                        >
                           Editar
                         </Button>
-                        <Button variant="destructive" size="sm">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteCategory(category)}
+                        >
                           Excluir
                         </Button>
                       </TableCell>
@@ -180,6 +248,30 @@ const Admin = () => {
             </CardContent>
           </Card>
         </div>
+
+        <CategoryDialog
+          open={categoryDialogOpen}
+          onOpenChange={setCategoryDialogOpen}
+          category={selectedCategory}
+          onSuccess={fetchData}
+        />
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir esta categoria? Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteCategory}>
+                Confirmar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
