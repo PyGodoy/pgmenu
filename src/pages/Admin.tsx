@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -25,15 +24,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/components/ui/use-toast";
 import { MenuItem, Category } from '@/types';
 import { CategoryDialog } from '@/components/CategoryDialog';
+import { MenuItemDialog } from '@/components/MenuItemDialog';
 
 const Admin = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [menuItemDialogOpen, setMenuItemDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | undefined>();
+  const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  const [menuItemToDelete, setMenuItemToDelete] = useState<MenuItem | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -133,6 +136,44 @@ const Admin = () => {
     }
   };
 
+  const handleEditMenuItem = (menuItem: MenuItem) => {
+    setSelectedMenuItem(menuItem);
+    setMenuItemDialogOpen(true);
+  };
+
+  const handleDeleteMenuItem = async (menuItem: MenuItem) => {
+    setMenuItemToDelete(menuItem);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteMenuItem = async () => {
+    if (!menuItemToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('menu_items')
+        .delete()
+        .eq('id', menuItemToDelete.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Item excluído com sucesso!",
+      });
+
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir item",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setMenuItemToDelete(null);
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/login');
@@ -210,7 +251,12 @@ const Admin = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <h2 className="text-2xl font-semibold">Itens do Cardápio</h2>
-              <Button>Adicionar Item</Button>
+              <Button onClick={() => {
+                setSelectedMenuItem(undefined);
+                setMenuItemDialogOpen(true);
+              }}>
+                Adicionar Item
+              </Button>
             </CardHeader>
             <CardContent>
               <Table>
@@ -234,10 +280,19 @@ const Admin = () => {
                       </TableCell>
                       <TableCell>{(item as any).category?.name}</TableCell>
                       <TableCell>
-                        <Button variant="outline" size="sm" className="mr-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mr-2"
+                          onClick={() => handleEditMenuItem(item)}
+                        >
                           Editar
                         </Button>
-                        <Button variant="destructive" size="sm">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteMenuItem(item)}
+                        >
                           Excluir
                         </Button>
                       </TableCell>
@@ -256,17 +311,33 @@ const Admin = () => {
           onSuccess={fetchData}
         />
 
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <MenuItemDialog
+          open={menuItemDialogOpen}
+          onOpenChange={setMenuItemDialogOpen}
+          menuItem={selectedMenuItem}
+          categories={categories}
+          onSuccess={fetchData}
+        />
+
+        <AlertDialog 
+          open={deleteDialogOpen} 
+          onOpenChange={setDeleteDialogOpen}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
               <AlertDialogDescription>
-                Tem certeza que deseja excluir esta categoria? Esta ação não pode ser desfeita.
+                {categoryToDelete 
+                  ? "Tem certeza que deseja excluir esta categoria?" 
+                  : "Tem certeza que deseja excluir este item?"} 
+                Esta ação não pode ser desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDeleteCategory}>
+              <AlertDialogAction 
+                onClick={categoryToDelete ? confirmDeleteCategory : confirmDeleteMenuItem}
+              >
                 Confirmar
               </AlertDialogAction>
             </AlertDialogFooter>
