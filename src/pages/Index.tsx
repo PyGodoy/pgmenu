@@ -59,14 +59,14 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header onSearch={setSearchQuery} />
-      <main className="flex-1 pt-32">
-        <div className="container mx-auto px-4">
+      <main className="flex-1 pt-[140px] md:pt-[120px]">
+        <div className="container mx-auto px-2 sm:px-4">
           <CategoryNav
             categories={categories}
             activeCategory={activeCategory ?? 0}
             onCategoryChange={setActiveCategory}
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 md:gap-6 mt-4 sm:mt-6 md:mt-8">
             {filteredItems.map((item) => (
               <MenuItem key={item.id} {...item} />
             ))}

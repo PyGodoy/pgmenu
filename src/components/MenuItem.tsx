@@ -12,17 +12,19 @@ export const MenuItem = ({ name, description, price, image_url }: MenuItemProps)
           <img
             src={image_url}
             alt={name}
-            className="menu-item-image w-full h-full object-cover"
+            className="w-full h-full object-cover"
           />
         </div>
-        <div className="p-4">
-          <div className="flex justify-between items-start gap-2 mb-2">
-            <h3 className="font-display text-lg font-medium line-clamp-2">{name}</h3>
-            <span className="font-medium text-primary whitespace-nowrap">
-              ${price.toFixed(2)}
+        <div className="p-2 sm:p-4">
+          <div className="flex justify-between items-start gap-2 mb-1 sm:mb-2">
+            <h3 className="font-display text-sm sm:text-lg font-medium line-clamp-1 sm:line-clamp-2">
+              {name}
+            </h3>
+            <span className="font-medium text-primary whitespace-nowrap text-sm sm:text-base">
+              R${price.toFixed(2)}
             </span>
           </div>
-          <p className="text-sm text-muted-foreground line-clamp-2">
+          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1 sm:line-clamp-2">
             {description}
           </p>
         </div>
