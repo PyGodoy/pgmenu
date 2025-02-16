@@ -19,7 +19,7 @@ const Index = () => {
       const { data, error } = await supabase
         .from('categories')
         .select('*')
-        .order('name');
+        .order('order'); // Certifique-se de que está ordenando por 'order'
       
       if (error) throw error;
       return data;

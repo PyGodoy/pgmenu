@@ -25,6 +25,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { MenuItem, Category } from '@/types';
 import { CategoryDialog } from '@/components/CategoryDialog';
 import { MenuItemDialog } from '@/components/MenuItemDialog';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 const Admin = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -70,7 +71,7 @@ const Admin = () => {
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('categories')
         .select('*')
-        .order('name');
+        .order('order'); // Ordenar por 'order'
 
       if (categoriesError) throw categoriesError;
       setCategories(categoriesData);
@@ -179,6 +180,47 @@ const Admin = () => {
     navigate('/login');
   };
 
+  const onDragEnd = (result: any) => {
+    if (!result.destination) return;
+
+    const reorderedCategories = Array.from(categories);
+    const [removed] = reorderedCategories.splice(result.source.index, 1);
+    reorderedCategories.splice(result.destination.index, 0, removed);
+
+    setCategories(reorderedCategories);
+
+    // Atualizar a ordem no banco de dados
+    updateCategoryOrder(reorderedCategories);
+  };
+
+  const updateCategoryOrder = async (reorderedCategories: Category[]) => {
+    try {
+      const updates = reorderedCategories.map((category, index) => ({
+        id: category.id,
+        name: category.name, // Adiciona o nome
+        slug: category.slug, // Adiciona o slug
+        order: index, // Mantém a posição
+      }));
+  
+      // Usar .update() para atualizar apenas a coluna `order`
+      const { error } = await supabase
+        .from('categories')
+        .upsert(updates, { onConflict: 'id' }); // Usar onConflict para garantir que apenas a ordem seja atualizada
+  
+      if (error) throw error;
+  
+      toast({
+        title: "Ordem das categorias atualizada com sucesso!",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao atualizar a ordem das categorias",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -210,40 +252,55 @@ const Admin = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Slug</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {categories.map((category) => (
-                    <TableRow key={category.id}>
-                      <TableCell>{category.name}</TableCell>
-                      <TableCell>{category.slug}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="mr-2"
-                          onClick={() => handleEditCategory(category)}
-                        >
-                          Editar
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeleteCategory(category)}
-                        >
-                          Excluir
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <DragDropContext onDragEnd={onDragEnd}>
+                <Droppable droppableId="categories">
+                  {(provided) => (
+                    <Table ref={provided.innerRef} {...provided.droppableProps}>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Slug</TableHead>
+                          <TableHead>Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {categories.map((category, index) => (
+                          <Draggable key={category.id} draggableId={category.id.toString()} index={index}>
+                            {(provided) => (
+                              <TableRow
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                              >
+                                <TableCell>{category.name}</TableCell>
+                                <TableCell>{category.slug}</TableCell>
+                                <TableCell>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="mr-2"
+                                    onClick={() => handleEditCategory(category)}
+                                  >
+                                    Editar
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleDeleteCategory(category)}
+                                  >
+                                    Excluir
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </TableBody>
+                    </Table>
+                  )}
+                </Droppable>
+              </DragDropContext>
             </CardContent>
           </Card>
 
