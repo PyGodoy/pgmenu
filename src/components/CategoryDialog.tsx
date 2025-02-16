@@ -49,10 +49,17 @@ export function CategoryDialog({ open, onOpenChange, category, onSuccess }: Cate
     try {
       setLoading(true);
       
-      if (isEditing) {
+      // Garante que os campos obrigatórios estejam presentes
+      const categoryData = {
+        name: data.name,
+        slug: data.slug,
+        created_at: new Date().toISOString(),
+      };
+      
+      if (isEditing && category) {
         const { error } = await supabase
           .from("categories")
-          .update(data)
+          .update({ name: data.name, slug: data.slug })
           .eq("id", category.id);
 
         if (error) throw error;
@@ -63,7 +70,7 @@ export function CategoryDialog({ open, onOpenChange, category, onSuccess }: Cate
       } else {
         const { error } = await supabase
           .from("categories")
-          .insert(data);
+          .insert([categoryData]);
 
         if (error) throw error;
 
