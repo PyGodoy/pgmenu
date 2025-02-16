@@ -1,15 +1,31 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Search } from "lucide-react";
 import { Input } from "./ui/input";
 
 interface HeaderProps {
   onSearch: (query: string) => void;
+  onHeaderHeightChange: (height: number) => void;
 }
 
-export const Header = ({ onSearch }: HeaderProps) => {
+export const Header = ({ onSearch, onHeaderHeightChange }: HeaderProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
 
+  // Atualiza a altura do Header quando ela mudar
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      if (headerRef.current) {
+        const height = headerRef.current.offsetHeight;
+        onHeaderHeightChange(height);
+      }
+    };
+
+    updateHeaderHeight(); // Atualiza na montagem inicial
+    window.addEventListener("resize", updateHeaderHeight); // Atualiza no redimensionamento
+    return () => window.removeEventListener("resize", updateHeaderHeight);
+  }, [onHeaderHeightChange]);
+
+  // Detecta o scroll
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 0);
@@ -19,9 +35,12 @@ export const Header = ({ onSearch }: HeaderProps) => {
   }, []);
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      isScrolled ? "bg-white/80 backdrop-blur-md shadow-sm" : "bg-transparent"
-    }`}>
+    <header
+      ref={headerRef}
+      className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        isScrolled ? "bg-white/80 backdrop-blur-md shadow-sm" : "bg-transparent"
+      }`}
+    >
       <div className="container mx-auto px-4 py-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 pb-2">
           <div className="text-center md:text-left">

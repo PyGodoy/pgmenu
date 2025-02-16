@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
@@ -12,6 +11,7 @@ import type { Category, MenuItem as MenuItemType } from "@/types";
 const Index = () => {
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [headerHeight, setHeaderHeight] = useState(0); // Estado para a altura do Header
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ['categories'],
@@ -19,7 +19,7 @@ const Index = () => {
       const { data, error } = await supabase
         .from('categories')
         .select('*')
-        .order('order'); // Certifique-se de que está ordenando por 'order'
+        .order('order');
       
       if (error) throw error;
       return data;
@@ -58,13 +58,17 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header onSearch={setSearchQuery} />
-      <main className="flex-1 pt-[140px] md:pt-[120px]">
+      <Header 
+        onSearch={setSearchQuery} 
+        onHeaderHeightChange={setHeaderHeight} // Passa a altura para o Header
+      />
+      <main className="flex-1">
         <div className="container mx-auto px-2 sm:px-4">
           <CategoryNav
             categories={categories}
             activeCategory={activeCategory ?? 0}
             onCategoryChange={setActiveCategory}
+            headerHeight={headerHeight} // Passa a altura para o CategoryNav
           />
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 md:gap-6 mt-4 sm:mt-6 md:mt-8">
             {filteredItems.map((item) => (
