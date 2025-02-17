@@ -9,7 +9,7 @@ interface HeaderProps {
   restaurant: Restaurant;
 }
 
-export const Header = ({ onSearch, onHeaderHeightChange }: HeaderProps) => {
+export const Header = ({ onSearch, onHeaderHeightChange, restaurant }: HeaderProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
 
@@ -46,8 +46,8 @@ export const Header = ({ onSearch, onHeaderHeightChange }: HeaderProps) => {
       <div className="container mx-auto px-4 py-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 pb-2">
           <div className="text-center md:text-left">
-            <h1 className="font-display text-2xl md:text-3xl font-bold">La Maison</h1>
-            <p className="text-sm text-muted-foreground">Fine French Cuisine</p>
+            <h1 className="font-display text-2xl md:text-3xl font-bold">{restaurant.name}</h1>
+            <p className="text-sm text-muted-foreground">{restaurant.description}</p>
           </div>
           <div className="relative w-full md:w-auto max-w-sm">
             <Input
