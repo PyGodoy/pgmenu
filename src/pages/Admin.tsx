@@ -67,21 +67,45 @@ const Admin = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      // Fetch categories
+  
+      // Obter usuário logado
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate('/login');
+        return;
+      }
+  
+      // Buscar ID do restaurante associado ao usuário logado
+      const { data: restaurant, error: restaurantError } = await supabase
+        .from('restaurants')
+        .select('id')
+        .eq('owner_id', session.user.id)
+        .maybeSingle();
+  
+      if (restaurantError) throw restaurantError;
+      if (!restaurant) {
+        throw new Error("Nenhum restaurante encontrado para este usuário.");
+      }
+  
+      const restaurantId = restaurant.id;
+  
+      // Buscar categorias filtrando pelo restaurante
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('categories')
         .select('*')
-        .order('order'); // Ordenar por 'order'
-
+        .eq('restaurant_id', restaurantId)
+        .order('order');
+  
       if (categoriesError) throw categoriesError;
       setCategories(categoriesData);
-
-      // Fetch menu items
+  
+      // Buscar itens do menu filtrando pelo restaurante
       const { data: menuItemsData, error: menuItemsError } = await supabase
         .from('menu_items')
         .select('*, category:categories(name)')
+        .eq('restaurant_id', restaurantId) // 🔹 Filtrando pelo restaurante correto
         .order('name');
-
+  
       if (menuItemsError) throw menuItemsError;
       setMenuItems(menuItemsData);
     } catch (error: any) {

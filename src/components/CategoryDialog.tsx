@@ -48,22 +48,34 @@ export function CategoryDialog({ open, onOpenChange, category, onSuccess }: Cate
   const onSubmit = async (data: CategoryFormData) => {
     try {
       setLoading(true);
-      
-      // Garante que os campos obrigatórios estejam presentes
+  
+      // Obtenha o ID do restaurante associado ao usuário logado
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: restaurant, error: restaurantError } = await supabase
+        .from('restaurants')
+        .select('id')
+        .eq('owner_id', user?.id)
+        .single();
+  
+      if (restaurantError || !restaurant) {
+        throw new Error('Restaurante não encontrado.');
+      }
+  
       const categoryData = {
         name: data.name,
         slug: data.slug,
+        restaurant_id: restaurant.id, // Inclua o ID do restaurante
         created_at: new Date().toISOString(),
       };
-      
+  
       if (isEditing && category) {
         const { error } = await supabase
           .from("categories")
           .update({ name: data.name, slug: data.slug })
           .eq("id", category.id);
-
+  
         if (error) throw error;
-
+  
         toast({
           title: "Categoria atualizada com sucesso!",
         });
@@ -71,14 +83,14 @@ export function CategoryDialog({ open, onOpenChange, category, onSuccess }: Cate
         const { error } = await supabase
           .from("categories")
           .insert([categoryData]);
-
+  
         if (error) throw error;
-
+  
         toast({
           title: "Categoria criada com sucesso!",
         });
       }
-
+  
       onSuccess();
       onOpenChange(false);
       form.reset();

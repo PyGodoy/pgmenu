@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { Search } from "lucide-react";
 import { Input } from "./ui/input";
+import { Restaurant } from "@/types";
 
 interface HeaderProps {
   onSearch: (query: string) => void;
   onHeaderHeightChange: (height: number) => void;
+  restaurant: Restaurant;
 }
 
 export const Header = ({ onSearch, onHeaderHeightChange }: HeaderProps) => {

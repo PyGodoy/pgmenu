@@ -12,6 +12,8 @@ const Index = () => {
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [headerHeight, setHeaderHeight] = useState(0); // Estado para a altura do Header
+  const [restaurant, setRestaurant] = useState<any>(null);
+
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ['categories'],
@@ -58,10 +60,10 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header 
-        onSearch={setSearchQuery} 
+      <Header
+        onSearch={setSearchQuery}
         onHeaderHeightChange={setHeaderHeight} // Passa a altura para o Header
-      />
+        restaurant={restaurant}/>
       <main className="flex-1">
         <div className="container mx-auto px-2 sm:px-4">
           <CategoryNav
@@ -78,7 +80,9 @@ const Index = () => {
         </div>
       </main>
       <BackToTop />
-      <Footer />
+      <Footer 
+      restaurant={restaurant}
+      />
     </div>
   );
 };

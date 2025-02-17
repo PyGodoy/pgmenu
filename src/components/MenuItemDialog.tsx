@@ -64,7 +64,7 @@ export function MenuItemDialog({
     defaultValues: {
       name: menuItem?.name || "",
       description: menuItem?.description || "",
-      price: menuItem?.price?.toString() || "",
+      price: menuItem?.price?
       category_id: menuItem?.category_id?.toString() || "",
       image_url: menuItem?.image_url || "",
     },
@@ -112,17 +112,30 @@ export function MenuItemDialog({
   const onSubmit = async (data: MenuItemFormData) => {
     try {
       setLoading(true);
-      
+  
+      // Obtenha o ID do restaurante associado ao usuário logado
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: restaurant, error: restaurantError } = await supabase
+        .from('restaurants')
+        .select('id')
+        .eq('owner_id', user?.id)
+        .single();
+  
+      if (restaurantError || !restaurant) {
+        throw new Error('Restaurante não encontrado.');
+      }
+  
       const menuItemData = {
         name: data.name,
         description: data.description,
         price: data.price,
         category_id: data.category_id,
         image_url: data.image_url,
+        restaurant_id: restaurant.id, // Inclua o ID do restaurante
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      
+  
       if (isEditing && menuItem) {
         const { error } = await supabase
           .from("menu_items")
@@ -135,9 +148,9 @@ export function MenuItemDialog({
             updated_at: new Date().toISOString(),
           })
           .eq("id", menuItem.id);
-
+  
         if (error) throw error;
-
+  
         toast({
           title: "Item atualizado com sucesso!",
         });
@@ -145,14 +158,14 @@ export function MenuItemDialog({
         const { error } = await supabase
           .from("menu_items")
           .insert([menuItemData]);
-
+  
         if (error) throw error;
-
+  
         toast({
           title: "Item criado com sucesso!",
         });
       }
-
+  
       onSuccess();
       onOpenChange(false);
       form.reset();
