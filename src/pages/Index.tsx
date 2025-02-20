@@ -16,16 +16,20 @@ const Index = () => {
 
 
   const { data: categories = [] } = useQuery<Category[]>({
-    queryKey: ['categories'],
+    queryKey: ['categories', restaurant?.id],
     queryFn: async () => {
+      if (!restaurant?.id) return [];
+      
       const { data, error } = await supabase
         .from('categories')
         .select('*')
+        .eq('restaurant_id', restaurant.id)
         .order('order');
       
       if (error) throw error;
       return data;
     },
+    enabled: !!restaurant?.id,
   });
 
   const { data: menuItems = [] } = useQuery<MenuItemType[]>({

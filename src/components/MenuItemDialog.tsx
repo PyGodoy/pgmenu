@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -64,12 +63,14 @@ export function MenuItemDialog({
     defaultValues: {
       name: menuItem?.name || "",
       description: menuItem?.description || "",
-      price: menuItem?.price?
+      price: menuItem?.price?.toString() || "", // Fixed this line
       category_id: menuItem?.category_id?.toString() || "",
       image_url: menuItem?.image_url || "",
     },
   });
 
+  // Rest of the component code remains the same...
+  
   const handleImageUpload = async (file: File) => {
     try {
       setUploadLoading(true);
@@ -131,7 +132,7 @@ export function MenuItemDialog({
         price: data.price,
         category_id: data.category_id,
         image_url: data.image_url,
-        restaurant_id: restaurant.id, // Inclua o ID do restaurante
+        restaurant_id: restaurant.id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -253,7 +254,7 @@ export function MenuItemDialog({
                     <FormLabel>Categoria</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
-                      defaultValue={field.value.toString()}
+                      defaultValue={field.value ? field.value.toString() : ""}
                     >
                       <FormControl>
                         <SelectTrigger>

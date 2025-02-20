@@ -15,6 +15,7 @@ export interface Category {
   id: number;
   name: string;
   slug: string;
+  banner_url?: string;
   order?: number;
   created_at?: string;
 }
