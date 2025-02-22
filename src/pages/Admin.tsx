@@ -26,6 +26,13 @@ import { MenuItem, Category } from '@/types';
 import { CategoryDialog } from '@/components/CategoryDialog';
 import { MenuItemDialog } from '@/components/MenuItemDialog';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+
 
 const Admin = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -122,6 +129,20 @@ const Admin = () => {
   useEffect(() => {
     fetchData();
   }, [toast]);
+
+  // Agrupar itens do cardápio por categoria
+  const groupedMenuItems = categories.map((category) => ({
+    ...category,
+    items: menuItems.filter((item) => item.category_id === category.id),
+  }));
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-lg">Carregando...</p>
+      </div>
+    );
+  }
 
   const handleEditCategory = (category: Category) => {
     setSelectedCategory(category);
@@ -340,47 +361,61 @@ const Admin = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Preço</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {menuItems.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.name}</TableCell>
-                      <TableCell>
-                        {new Intl.NumberFormat('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL'
-                        }).format(item.price)}
-                      </TableCell>
-                      <TableCell>{(item as any).category?.name}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="mr-2"
-                          onClick={() => handleEditMenuItem(item)}
-                        >
-                          Editar
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeleteMenuItem(item)}
-                        >
-                          Excluir
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <Accordion type="single" collapsible>
+                {groupedMenuItems.map((category) => (
+                  <AccordionItem key={category.id} value={category.id.toString()}>
+                    <AccordionTrigger>
+                      <div className="flex items-center justify-between w-full">
+                        <span>{category.name}</span>
+                        <span className="text-sm text-gray-500">
+                          {category.items.length} itens
+                        </span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Preço</TableHead>
+                            <TableHead>Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {category.items.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell>{item.name}</TableCell>
+                              <TableCell>
+                                {new Intl.NumberFormat('pt-BR', {
+                                  style: 'currency',
+                                  currency: 'BRL',
+                                }).format(item.price)}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="mr-2"
+                                  onClick={() => handleEditMenuItem(item)}
+                                >
+                                  Editar
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleDeleteMenuItem(item)}
+                                >
+                                  Excluir
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
             </CardContent>
           </Card>
         </div>
@@ -400,23 +435,23 @@ const Admin = () => {
           onSuccess={fetchData}
         />
 
-        <AlertDialog 
-          open={deleteDialogOpen} 
+        <AlertDialog
+          open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
         >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
               <AlertDialogDescription>
-                {categoryToDelete 
-                  ? "Tem certeza que deseja excluir esta categoria?" 
-                  : "Tem certeza que deseja excluir este item?"} 
+                {categoryToDelete
+                  ? "Tem certeza que deseja excluir esta categoria?"
+                  : "Tem certeza que deseja excluir este item?"}
                 Esta ação não pode ser desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction 
+              <AlertDialogAction
                 onClick={categoryToDelete ? confirmDeleteCategory : confirmDeleteMenuItem}
               >
                 Confirmar

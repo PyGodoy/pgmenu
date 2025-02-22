@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Switch } from "@/components/ui/switch"; // Importe o componente Switch
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageIcon, Loader2 } from "lucide-react";
+import { clsx } from "clsx"; // Importe o clsx
 import {
   Select,
   SelectContent,
@@ -33,6 +35,7 @@ const menuItemSchema = z.object({
   category_id: z.string().min(1, "Categoria é obrigatória").transform((val) => parseInt(val)),
   image: z.instanceof(File).optional(),
   image_url: z.string().min(1, "Imagem é obrigatória"),
+  active: z.boolean(), // Adicione esta linha
 });
 
 type MenuItemFormData = z.infer<typeof menuItemSchema>;
@@ -66,6 +69,7 @@ export function MenuItemDialog({
       price: menuItem?.price?.toString() || "", // Fixed this line
       category_id: menuItem?.category_id?.toString() || "",
       image_url: menuItem?.image_url || "",
+      active: menuItem?.active || true, // Adicione esta linha
     },
   });
 
@@ -78,6 +82,7 @@ export function MenuItemDialog({
         price: menuItem.price?.toString() || "", // Garantir que o preço seja uma string
         category_id: menuItem.category_id?.toString() || "", // Garantir que o category_id seja uma string
         image_url: menuItem.image_url || "",
+        active: menuItem.active, // Use o valor atual do item
       });
       // Atualiza a preview da imagem
       setPreviewUrl(menuItem.image_url || "");
@@ -89,6 +94,7 @@ export function MenuItemDialog({
         price: "",
         category_id: "",
         image_url: "",
+        active: true, // Adicione esta linha
       });
       setPreviewUrl("");
     }
@@ -160,6 +166,7 @@ export function MenuItemDialog({
         restaurant_id: restaurant.id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        active: data.active, // Adicione esta linha
       };
   
       if (isEditing && menuItem) {
@@ -171,22 +178,33 @@ export function MenuItemDialog({
             price: data.price,
             category_id: data.category_id,
             image_url: data.image_url,
+            active: data.active, // Certifique-se de que está presente
             updated_at: new Date().toISOString(),
           })
           .eq("id", menuItem.id);
-  
+      
         if (error) throw error;
-  
+      
         toast({
           title: "Item atualizado com sucesso!",
         });
       } else {
         const { error } = await supabase
           .from("menu_items")
-          .insert([menuItemData]);
-  
+          .insert([{
+            name: data.name,
+            description: data.description,
+            price: data.price,
+            category_id: data.category_id,
+            image_url: data.image_url,
+            restaurant_id: restaurant.id,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            active: data.active, // Certifique-se de que está presente
+          }]);
+      
         if (error) throw error;
-  
+      
         toast({
           title: "Item criado com sucesso!",
         });
@@ -303,6 +321,27 @@ export function MenuItemDialog({
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="active"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <FormLabel>Ativo</FormLabel>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className={clsx(
+                        "data-[state=checked]:bg-green-500", // Cor verde quando ativo
+                        "data-[state=unchecked]:bg-red-500" // Cor cinza quando inativo
+                      )}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

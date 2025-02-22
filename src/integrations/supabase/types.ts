@@ -106,6 +106,7 @@ export interface Database {
           updated_at: string | null
           dietary_info: string[] | null
           restaurant_id: number | null
+          active: boolean;
         }
         Insert: {
           id?: number
@@ -118,6 +119,7 @@ export interface Database {
           updated_at?: string | null
           dietary_info?: string[] | null
           restaurant_id?: number | null
+          active?: boolean;
         }
         Update: {
           id?: number
@@ -130,6 +132,7 @@ export interface Database {
           updated_at?: string | null
           dietary_info?: string[] | null
           restaurant_id?: number | null
+          active?: boolean;
         }
         Relationships: [
           {

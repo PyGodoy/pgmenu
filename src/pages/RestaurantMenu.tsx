@@ -77,6 +77,7 @@ const RestaurantMenu = () => {
         .from('menu_items')
         .select('*')
         .eq('restaurant_id', restaurant.id)
+        .eq('active', true) // Filtra apenas os itens ativos
         .order('name');
       
       if (activeCategory) {

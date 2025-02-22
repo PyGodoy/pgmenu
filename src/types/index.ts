@@ -9,6 +9,7 @@ export interface MenuItem {
   dietary_info?: string[];
   created_at: string;
   updated_at: string;
+  active: boolean; // Adicione esta linha
 }
 
 export interface Category {

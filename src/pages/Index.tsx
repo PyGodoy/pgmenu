@@ -38,6 +38,7 @@ const Index = () => {
       let query = supabase
         .from('menu_items')
         .select('*')
+        .eq('active', true)
         .order('name');
       
       if (activeCategory) {
