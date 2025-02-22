@@ -1,4 +1,4 @@
-import { useState } from "react"; // Importe o useState
+import { useState } from "react";
 import { Card, CardContent } from "./ui/card";
 import type { MenuItem as MenuItemType } from "@/types";
 
@@ -10,11 +10,11 @@ export const MenuItem = ({ name, description, price, image_url }: MenuItemProps)
   return (
     <Card className="group menu-item overflow-hidden hover:shadow-lg transition-shadow duration-300">
       <CardContent className="p-0">
-        <div className="aspect-[4/3] overflow-hidden">
+        <div className="aspect-[4/3] overflow-hidden flex items-center justify-center">
           <img
             src={image_url}
             alt={name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-scale-down" // Usando object-scale-down
           />
         </div>
         <div className="p-2 sm:p-4">
