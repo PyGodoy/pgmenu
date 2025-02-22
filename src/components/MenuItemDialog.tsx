@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -68,6 +68,31 @@ export function MenuItemDialog({
       image_url: menuItem?.image_url || "",
     },
   });
+
+  useEffect(() => {
+      if (open && menuItem) {
+        // Atualiza os valores do formulário
+        form.reset({
+          name: menuItem.name,
+          description: menuItem.description,
+          price: menuItem.price || "",
+          category_id: menuItem.category_id || "",
+          image_url: menuItem.image_url || "",
+        });
+        // Atualiza a preview da imagem
+        setPreviewUrl(menuItem.image_url || "");
+      } else if (!open) {
+        // Limpa o formulário quando fecha o modal
+        form.reset({
+          name: "",
+          description: "",
+          price: "",
+          category_id: "",
+          image_url: "",
+        });
+        setPreviewUrl("");
+      }
+    }, [open, menuItem, form]);
 
   // Rest of the component code remains the same...
   

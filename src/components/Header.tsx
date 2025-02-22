@@ -40,23 +40,37 @@ export const Header = ({ onSearch, onHeaderHeightChange, restaurant }: HeaderPro
     <header
       ref={headerRef}
       className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled ? "bg-white/80 backdrop-blur-md shadow-sm" : "bg-transparent"
+        isScrolled ? "bg-white/90 backdrop-blur-md shadow-sm" : "bg-white"
       }`}
     >
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 pb-2">
-          <div className="text-center md:text-left">
-            <h1 className="font-display text-2xl md:text-3xl font-bold">{restaurant.name}</h1>
-            <p className="text-sm text-muted-foreground">{restaurant.description}</p>
+      <div className="container mx-auto px-4 py-3">
+        <div className="flex items-center justify-between gap-4">
+          {/* Logo e nome do restaurante */}
+          <div className="flex items-center gap-3">
+            {restaurant.logo_url && (
+              <img
+                src={restaurant.logo_url}
+                alt={`Logo do ${restaurant.name}`}
+                className="h-10 w-10 rounded-full object-cover border-2 border-primary"
+              />
+            )}
+            <div className="text-left">
+              <h1 className="font-display text-xl font-bold text-primary">
+                {restaurant.name}
+              </h1>
+              <p className="text-xs text-muted-foreground">{restaurant.description}</p>
+            </div>
           </div>
-          <div className="relative w-full md:w-auto max-w-sm">
+
+          {/* Barra de pesquisa */}
+          <div className="relative flex-1 max-w-[180px]">
             <Input
               type="search"
-              placeholder="Search menu..."
-              className="pl-10 pr-4 h-10 rounded-full border-gray-200"
+              placeholder="Buscar..."
+              className="pl-8 pr-3 h-8 rounded-full border-gray-200 focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
               onChange={(e) => onSearch(e.target.value)}
             />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           </div>
         </div>
       </div>

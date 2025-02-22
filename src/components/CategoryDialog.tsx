@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -50,6 +50,24 @@ export function CategoryDialog({ open, onOpenChange, category, onSuccess }: Cate
       banner_url: category?.banner_url || "",
     },
   });
+
+  useEffect(() => {
+    if (open && category) {
+      form.reset({
+        name: category.name,
+        slug: category.slug,
+        banner_url: category.banner_url || "",
+      });
+      setPreviewUrl(category.banner_url || "");
+    } else if (!open) {
+      form.reset({
+        name: "",
+        slug: "",
+        banner_url: "",
+      });
+      setPreviewUrl("");
+    }
+  }, [open, category, form]);
 
   // Função para fazer upload da imagem
   const handleImageUpload = async (file: File) => {
