@@ -70,29 +70,29 @@ export function MenuItemDialog({
   });
 
   useEffect(() => {
-      if (open && menuItem) {
-        // Atualiza os valores do formulário
-        form.reset({
-          name: menuItem.name,
-          description: menuItem.description,
-          price: menuItem.price || "",
-          category_id: menuItem.category_id || "",
-          image_url: menuItem.image_url || "",
-        });
-        // Atualiza a preview da imagem
-        setPreviewUrl(menuItem.image_url || "");
-      } else if (!open) {
-        // Limpa o formulário quando fecha o modal
-        form.reset({
-          name: "",
-          description: "",
-          price: "",
-          category_id: "",
-          image_url: "",
-        });
-        setPreviewUrl("");
-      }
-    }, [open, menuItem, form]);
+    if (open && menuItem) {
+      // Atualiza os valores do formulário
+      form.reset({
+        name: menuItem.name,
+        description: menuItem.description,
+        price: menuItem.price?.toString() || "", // Garantir que o preço seja uma string
+        category_id: menuItem.category_id?.toString() || "", // Garantir que o category_id seja uma string
+        image_url: menuItem.image_url || "",
+      });
+      // Atualiza a preview da imagem
+      setPreviewUrl(menuItem.image_url || "");
+    } else if (!open) {
+      // Limpa o formulário quando fecha o modal
+      form.reset({
+        name: "",
+        description: "",
+        price: "",
+        category_id: "",
+        image_url: "",
+      });
+      setPreviewUrl("");
+    }
+  }, [open, menuItem, form]);
 
   // Rest of the component code remains the same...
   
@@ -251,25 +251,26 @@ export function MenuItemDialog({
             />
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Preço</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        type="number" 
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00" 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Preço</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      type="number" 
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00" 
+                      onChange={(e) => field.onChange(e.target.value)} // Garantir que o valor seja uma string
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
               <FormField
                 control={form.control}
