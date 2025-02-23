@@ -38,7 +38,7 @@ const Index = () => {
       let query = supabase
         .from('menu_items')
         .select('*')
-        .eq('active', true)
+        .eq('active', true) // Filtra apenas os itens ativos
         .order('name');
       
       if (activeCategory) {
@@ -60,7 +60,7 @@ const Index = () => {
     const matchesSearch = searchQuery === "" || 
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+    return matchesSearch && item.active; // Filtra apenas os itens ativos
   });
 
   return (

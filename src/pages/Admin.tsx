@@ -32,6 +32,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Badge } from 'lucide-react';
 
 
 const Admin = () => {
@@ -47,6 +48,7 @@ const Admin = () => {
   const [menuItemToDelete, setMenuItemToDelete] = useState<MenuItem | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [openCategory, setOpenCategory] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -70,6 +72,38 @@ const Admin = () => {
 
     checkAuth();
   }, [navigate]);
+
+  const toggleItemActive = async (item: MenuItem) => {
+    try {
+      const { error } = await supabase
+        .from('menu_items')
+        .update({ active: !item.active })
+        .eq('id', item.id);
+
+      if (error) throw error;
+
+      // Atualizar localmente o estado do item sem recarregar todos os dados
+      setMenuItems(currentItems =>
+        currentItems.map(menuItem =>
+          menuItem.id === item.id
+            ? { ...menuItem, active: !menuItem.active }
+            : menuItem
+        )
+      );
+
+      toast({
+        title: `Item ${item.active ? 'desativado' : 'ativado'} com sucesso!`,
+      });
+
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao alterar status do item",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -351,73 +385,98 @@ const Admin = () => {
 
           {/* Menu Items Section */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <h2 className="text-2xl font-semibold">Itens do Cardápio</h2>
-              <Button onClick={() => {
-                setSelectedMenuItem(undefined);
-                setMenuItemDialogOpen(true);
-              }}>
-                Adicionar Item
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <Accordion type="single" collapsible>
-                {groupedMenuItems.map((category) => (
-                  <AccordionItem key={category.id} value={category.id.toString()}>
-                    <AccordionTrigger>
-                      <div className="flex items-center justify-between w-full">
-                        <span>{category.name}</span>
-                        <span className="text-sm text-gray-500">
-                          {category.items.length} itens
-                        </span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Nome</TableHead>
-                            <TableHead>Preço</TableHead>
-                            <TableHead>Ações</TableHead>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <h2 className="text-2xl font-semibold">Itens do Cardápio</h2>
+          <Button onClick={() => {
+            setSelectedMenuItem(undefined);
+            setMenuItemDialogOpen(true);
+          }}>
+            Adicionar Item
+          </Button>
+        </CardHeader>
+          <CardContent>
+          <Accordion 
+            type="single" 
+            collapsible
+            value={openCategory}
+            onValueChange={setOpenCategory}>
+              {groupedMenuItems.map((category) => (
+                <AccordionItem key={category.id} value={category.id.toString()}>
+                  <AccordionTrigger>
+                    <div className="flex items-center justify-between w-full">
+                      <span>{category.name}</span>
+                      <span className="text-sm text-gray-500">
+                        {category.items.length} itens
+                      </span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Preço</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {category.items.map((item) => (
+                          <TableRow 
+                            key={item.id}
+                            className={!item.active ? "opacity-60" : ""}
+                          >
+                            <TableCell>{item.name}</TableCell>
+                            <TableCell>
+                              {new Intl.NumberFormat('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL',
+                              }).format(item.price)}
+                            </TableCell>
+                            <TableCell>
+                              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                item.active 
+                                  ? "bg-green-100 text-green-800" 
+                                  : "bg-gray-100 text-gray-800"
+                              }`}>
+                                {item.active ? "Ativo" : "Desativado"}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="mr-2"
+                                onClick={() => handleEditMenuItem(item)}
+                              >
+                                Editar
+                              </Button>
+                              <Button
+                                variant={item.active ? "secondary" : "default"}
+                                size="sm"
+                                className="mr-2"
+                                onClick={() => toggleItemActive(item)}
+                              >
+                                {item.active ? "Desativar" : "Ativar"}
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeleteMenuItem(item)}
+                              >
+                                Excluir
+                              </Button>
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {category.items.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell>{item.name}</TableCell>
-                              <TableCell>
-                                {new Intl.NumberFormat('pt-BR', {
-                                  style: 'currency',
-                                  currency: 'BRL',
-                                }).format(item.price)}
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="mr-2"
-                                  onClick={() => handleEditMenuItem(item)}
-                                >
-                                  Editar
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => handleDeleteMenuItem(item)}
-                                >
-                                  Excluir
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </CardContent>
-          </Card>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </CardContent>
+        </Card>
         </div>
 
         <CategoryDialog
