@@ -15,15 +15,14 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, ImageIcon } from "lucide-react";
+import { Loader2, ImageIcon, Trash2 } from "lucide-react";
 import type { Category } from "@/types";
 
-// Esquema Zod atualizado para incluir o campo de imagem
 const categorySchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   slug: z.string().min(1, "Slug é obrigatório"),
-  banner_url: z.string().optional(), // URL do banner
-  banner_file: z.instanceof(File).optional(), // Arquivo de imagem
+  banner_url: z.string().optional(),
+  banner_file: z.instanceof(File).optional(),
 });
 
 type CategoryFormData = z.infer<typeof categorySchema>;
@@ -69,29 +68,32 @@ export function CategoryDialog({ open, onOpenChange, category, onSuccess }: Cate
     }
   }, [open, category, form]);
 
-  // Função para fazer upload da imagem
+  const handleRemoveBanner = () => {
+    form.setValue("banner_url", "");
+    setPreviewUrl("");
+    toast({
+      title: "Banner removido",
+    });
+  };
+
   const handleImageUpload = async (file: File) => {
     try {
       setUploadLoading(true);
 
-      // Gerar um nome único para o arquivo
       const fileExt = file.name.split(".").pop();
       const fileName = `${Math.random().toString(36).substring(2)}${Date.now().toString()}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      // Fazer upload do arquivo para o Supabase Storage
       const { data, error } = await supabase.storage
-        .from("category-banners") // Nome do bucket no Supabase Storage
+        .from("category-banners")
         .upload(filePath, file);
 
       if (error) throw error;
 
-      // Obter a URL pública do arquivo
       const { data: { publicUrl } } = supabase.storage
         .from("category-banners")
         .getPublicUrl(filePath);
 
-      // Atualizar o formulário com a nova URL
       form.setValue("banner_url", publicUrl);
       setPreviewUrl(publicUrl);
 
@@ -109,12 +111,10 @@ export function CategoryDialog({ open, onOpenChange, category, onSuccess }: Cate
     }
   };
 
-  // Função para enviar o formulário
   const onSubmit = async (data: CategoryFormData) => {
     try {
       setLoading(true);
 
-      // Obter o ID do restaurante associado ao usuário logado
       const { data: { user } } = await supabase.auth.getUser();
       const { data: restaurant, error: restaurantError } = await supabase
         .from("restaurants")
@@ -135,7 +135,6 @@ export function CategoryDialog({ open, onOpenChange, category, onSuccess }: Cate
       };
 
       if (isEditing && category) {
-        // Atualizar categoria existente
         const { error } = await supabase
           .from("categories")
           .update(categoryData)
@@ -147,7 +146,6 @@ export function CategoryDialog({ open, onOpenChange, category, onSuccess }: Cate
           title: "Categoria atualizada com sucesso!",
         });
       } else {
-        // Criar nova categoria
         const { error } = await supabase.from("categories").insert([categoryData]);
 
         if (error) throw error;
@@ -240,6 +238,15 @@ export function CategoryDialog({ open, onOpenChange, category, onSuccess }: Cate
                             alt="Preview do banner"
                             className="h-full w-full object-cover"
                           />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2"
+                            onClick={handleRemoveBanner}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       )}
                       {!previewUrl && (
