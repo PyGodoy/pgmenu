@@ -39,7 +39,7 @@ const Index = () => {
         .from('menu_items')
         .select('*')
         .eq('active', true) // Filtra apenas os itens ativos
-        .order('name');
+        .order('order_itens');
       
       if (activeCategory) {
         query = query.eq('category_id', activeCategory);
