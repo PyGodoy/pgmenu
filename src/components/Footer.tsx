@@ -15,7 +15,6 @@ export const Footer = ({ restaurant }: FooterProps) => {
     twitter: <FaTwitter />,
   };
 
-  // Animação de entrada para os itens do footer
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 },
@@ -24,22 +23,23 @@ export const Footer = ({ restaurant }: FooterProps) => {
   return (
     <footer className="bg-secondary mt-20 py-8">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 gap-8">
+        <div className="grid grid-cols-1 gap-8 text-center">
           {/* Sobre o restaurante */}
           <motion.div
             initial="hidden"
             whileInView="visible"
             variants={itemVariants}
             transition={{ duration: 0.5, delay: 0.2 }}
+            className="flex flex-col items-center"
           >
             <h3 className="font-display text-lg font-semibold mb-3 text-primary">
               {restaurant.name}
             </h3>
-            <p className="text-xs text-muted-foreground mb-4">
+            <p className="text-xs text-muted-foreground mb-4 max-w-md mx-auto">
               {restaurant.description}
             </p>
             {restaurant.social_media && (
-              <div className="flex space-x-3">
+              <div className="flex justify-center space-x-3">
                 {restaurant.social_media.facebook && (
                   <a
                     href={restaurant.social_media.facebook}
@@ -80,18 +80,19 @@ export const Footer = ({ restaurant }: FooterProps) => {
             whileInView="visible"
             variants={itemVariants}
             transition={{ duration: 0.5, delay: 0.4 }}
+            className="flex flex-col items-center"
           >
             <h4 className="font-semibold text-base mb-3 text-primary">Contato</h4>
             <ul className="space-y-1 text-xs text-muted-foreground">
-              <li className="flex items-center gap-2">
+              <li className="flex items-center justify-center gap-2">
                 <span className="text-primary">📍</span>
                 <span>{restaurant.address}</span>
               </li>
-              <li className="flex items-center gap-2">
+              <li className="flex items-center justify-center gap-2">
                 <span className="text-primary">📞</span>
                 <span>{restaurant.phone}</span>
               </li>
-              <li className="flex items-center gap-2">
+              <li className="flex items-center justify-center gap-2">
                 <span className="text-primary">✉️</span>
                 <span>{restaurant.email}</span>
               </li>
@@ -104,13 +105,14 @@ export const Footer = ({ restaurant }: FooterProps) => {
             whileInView="visible"
             variants={itemVariants}
             transition={{ duration: 0.5, delay: 0.6 }}
+            className="flex flex-col items-center"
           >
             <h4 className="font-semibold text-base mb-3 text-primary">
               Horário de Funcionamento
             </h4>
             <ul className="space-y-1 text-xs text-muted-foreground">
               {restaurant.hours_of_operation.split("\n").map((hours, index) => (
-                <li key={index} className="flex items-center gap-2">
+                <li key={index} className="flex items-center justify-center gap-2">
                   <span className="text-primary">⏰</span>
                   <span>{hours}</span>
                 </li>
