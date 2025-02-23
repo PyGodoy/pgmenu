@@ -24,7 +24,7 @@ export const Footer = ({ restaurant }: FooterProps) => {
     <footer className="bg-secondary mt-20 py-8">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 gap-8 text-center">
-          {/* Sobre o restaurante */}
+          {/* Logo e Sobre o restaurante */}
           <motion.div
             initial="hidden"
             whileInView="visible"
@@ -32,6 +32,15 @@ export const Footer = ({ restaurant }: FooterProps) => {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="flex flex-col items-center"
           >
+            {restaurant.logo_url && (
+              <div className="mb-4">
+                <img
+                  src={restaurant.logo_url}
+                  alt={`Logo do ${restaurant.name}`}
+                  className="h-16 w-16 rounded-full object-cover border-2 border-primary"
+                />
+              </div>
+            )}
             <h3 className="font-display text-lg font-semibold mb-3 text-primary">
               {restaurant.name}
             </h3>
