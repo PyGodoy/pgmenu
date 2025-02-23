@@ -77,6 +77,9 @@ export const CategoryNav = ({
           </div>
         </div>
       </div>
+
+      {/* Adiciona uma margem superior condicional com mais espaço */}
+      {!currentBanner && <div className="mt-16" />} {/* Aumentei para mt-16 (4rem) */}
     </div>
   );
 };
