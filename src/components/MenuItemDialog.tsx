@@ -34,8 +34,8 @@ const menuItemSchema = z.object({
   price: z.string().min(1, "Preço é obrigatório").transform((val) => parseFloat(val)),
   category_id: z.string().min(1, "Categoria é obrigatória").transform((val) => parseInt(val)),
   image: z.instanceof(File).optional(),
-  image_url: z.string().min(1, "Imagem é obrigatória"),
-  active: z.boolean(), // Adicione esta linha
+  image_url: z.string().optional(), // Torna o campo image_url opcional
+  active: z.boolean(),
 });
 
 type MenuItemFormData = z.infer<typeof menuItemSchema>;
@@ -162,11 +162,11 @@ export function MenuItemDialog({
         description: data.description,
         price: data.price,
         category_id: data.category_id,
-        image_url: data.image_url,
+        image_url: data.image_url || null, // Permite que image_url seja null
         restaurant_id: restaurant.id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        active: data.active, // Adicione esta linha
+        active: data.active,
       };
   
       if (isEditing && menuItem) {
@@ -177,14 +177,14 @@ export function MenuItemDialog({
             description: data.description,
             price: data.price,
             category_id: data.category_id,
-            image_url: data.image_url,
-            active: data.active, // Certifique-se de que está presente
+            image_url: data.image_url || null, // Permite que image_url seja null
+            active: data.active,
             updated_at: new Date().toISOString(),
           })
           .eq("id", menuItem.id);
-      
+  
         if (error) throw error;
-      
+  
         toast({
           title: "Item atualizado com sucesso!",
         });
@@ -196,15 +196,15 @@ export function MenuItemDialog({
             description: data.description,
             price: data.price,
             category_id: data.category_id,
-            image_url: data.image_url,
+            image_url: data.image_url || null, // Permite que image_url seja null
             restaurant_id: restaurant.id,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            active: data.active, // Certifique-se de que está presente
+            active: data.active,
           }]);
-      
+  
         if (error) throw error;
-      
+  
         toast({
           title: "Item criado com sucesso!",
         });
@@ -343,50 +343,50 @@ export function MenuItemDialog({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="image"
-              render={() => (
-                <FormItem>
-                  <FormLabel>Imagem</FormLabel>
-                  <FormControl>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-4">
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              handleImageUpload(file);
-                            }
-                          }}
-                          className="flex-1"
-                        />
-                        {uploadLoading && (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        )}
-                      </div>
-                      {previewUrl && (
-                        <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-muted">
-                          <img
-                            src={previewUrl}
-                            alt="Preview"
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      )}
-                      {!previewUrl && (
-                        <div className="flex aspect-video w-full items-center justify-center rounded-lg border bg-muted">
-                          <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                      )}
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+<FormField
+  control={form.control}
+  name="image"
+  render={() => (
+    <FormItem>
+      <FormLabel>Imagem (Opcional)</FormLabel> {/* Adicione "(Opcional)" ao label */}
+      <FormControl>
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <Input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleImageUpload(file);
+                }
+              }}
+              className="flex-1"
             />
+            {uploadLoading && (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            )}
+          </div>
+          {previewUrl && (
+            <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-muted">
+              <img
+                src={previewUrl}
+                alt="Preview"
+                className="h-full w-full object-cover"
+              />
+            </div>
+          )}
+          {!previewUrl && (
+            <div className="flex aspect-video w-full items-center justify-center rounded-lg border bg-muted">
+              <ImageIcon className="h-8 w-8 text-muted-foreground" />
+            </div>
+          )}
+        </div>
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
 
             <div className="flex justify-end space-x-2">
               <Button
