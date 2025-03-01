@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "./ui/card";
 import type { MenuItem as MenuItemType } from "@/types";
+import clsx from "clsx";
 
 interface MenuItemProps extends Omit<MenuItemType, 'id' | 'category_id' | 'created_at' | 'updated_at' | 'dietary_info'> {}
 
@@ -13,35 +14,30 @@ export const MenuItem = ({ name, description, price, image_url }: MenuItemProps)
   return (
     <Card className="group menu-item overflow-hidden hover:shadow-lg transition-shadow duration-300">
       <CardContent className="p-0">
-        {/* Espaço da imagem ou fundo neutro */}
-        <div className="aspect-[4/3] overflow-hidden relative">
-          {hasImage ? (
+        {/* Renderiza o espaço da imagem apenas se houver uma imagem */}
+        {hasImage && (
+          <div className="aspect-[4/3] overflow-hidden relative">
             <img
               src={image_url}
               alt={name}
               className="w-full h-full object-cover"
             />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-              <h3 className="text-xl font-display font-semibold text-gray-600 text-center px-4">
-                {name}
-              </h3>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Conteúdo textual */}
-        <div className="p-4">
-          <div className="flex justify-between items-start gap-2 mb-2">
-            {/* Mostra o nome ao lado do preço SEMPRE (com ou sem imagem) */}
-            <h3 className="font-display text-lg font-medium">
-              {name}
-            </h3>
-            <span className="font-medium text-primary whitespace-nowrap">
-              R${price.toFixed(2)}
-            </span>
-          </div>
-          <p className="text-sm text-muted-foreground">
+        <div className={`p-4 ${!hasImage ? "pt-6" : ""}`}>
+          {/* Nome */}
+          <h3 className="font-display text-lg font-medium mb-1">
+            {name}
+          </h3>
+          {/* Preço */}
+          <span className="font-medium text-primary whitespace-nowrap">
+            R${price.toFixed(2)}
+          </span>
+
+          {/* Descrição */}
+          <p className="text-sm text-muted-foreground mt-2">
             {expanded ? description : `${description.length > 100 ? description.slice(0, 100) + '...' : description}`}
             {description.length > 100 && ( // Mostra o botão apenas se a descrição for longa
               <button
