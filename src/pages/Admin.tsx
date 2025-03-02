@@ -33,6 +33,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from 'lucide-react';
+import { QRCodeGenerator } from '@/components/QrcodeGenerator';
+import { motion, AnimatePresence } from "framer-motion";
 
 const Admin = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -45,6 +47,7 @@ const Admin = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [menuItemToDelete, setMenuItemToDelete] = useState<MenuItem | null>(null);
+  const [showQRCode, setShowQRCode] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const [openCategory, setOpenCategory] = useState<string | undefined>(undefined);
@@ -627,6 +630,25 @@ const Admin = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        <Button 
+          onClick={() => setShowQRCode(!showQRCode)} 
+          style={{ backgroundColor: 'var(--primary)', color: 'var(--background)', marginTop: '20px' }}
+        >
+          {showQRCode ? "Ocultar QR Code" : "Mostrar QR Code"}
+        </Button>
+
+        <AnimatePresence>
+          {showQRCode && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <QRCodeGenerator />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
