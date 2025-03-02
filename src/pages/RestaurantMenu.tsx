@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -14,6 +15,21 @@ const RestaurantMenu = () => {
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [headerHeight, setHeaderHeight] = useState(0);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  // Monitorar o status da conexão
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Fetch restaurant data
   const { data: restaurant } = useQuery<Restaurant>({
@@ -29,7 +45,7 @@ const RestaurantMenu = () => {
       if (!data) throw new Error('Restaurant not found');
 
       // Transformar os dados para corresponder ao tipo Restaurant
-      return {
+      const restaurantData = {
         id: data.id,
         name: data.name,
         description: data.description || '',
@@ -45,9 +61,19 @@ const RestaurantMenu = () => {
         } : {},
         created_at: data.created_at || '',
         updated_at: data.updated_at || '',
-        customization: data.customization || {}, // Adicionar o campo customization
+        customization: data.customization || {},
       };
+
+      // Salvar dados do restaurante no localStorage para acesso offline
+      localStorage.setItem(`restaurant_${restaurantSlug}`, JSON.stringify(restaurantData));
+
+      return restaurantData;
     },
+    initialData: () => {
+      const cachedData = localStorage.getItem(`restaurant_${restaurantSlug}`);
+      return cachedData ? JSON.parse(cachedData) : undefined;
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutos
   });
 
   // Aplicar as personalizações dinamicamente
@@ -77,9 +103,19 @@ const RestaurantMenu = () => {
         .order('order');
       
       if (error) throw error;
+
+      // Salvar categorias no localStorage para acesso offline
+      localStorage.setItem(`categories_${restaurant.id}`, JSON.stringify(data));
+      
       return data;
     },
     enabled: !!restaurant?.id,
+    initialData: () => {
+      if (!restaurant?.id) return [];
+      const cachedData = localStorage.getItem(`categories_${restaurant.id}`);
+      return cachedData ? JSON.parse(cachedData) : [];
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutos
   });
 
   // Fetch menu items for this restaurant
@@ -92,7 +128,7 @@ const RestaurantMenu = () => {
         .from('menu_items')
         .select('*')
         .eq('restaurant_id', restaurant.id)
-        .eq('active', true) // Filtra apenas os itens ativos
+        .eq('active', true)
         .order('order_itens');
       
       if (activeCategory) {
@@ -101,12 +137,28 @@ const RestaurantMenu = () => {
       
       const { data, error } = await query;
       if (error) throw error;
+
+      // Salvar itens do menu no localStorage para acesso offline
+      const cacheKey = activeCategory 
+        ? `menuItems_${restaurant.id}_${activeCategory}` 
+        : `menuItems_${restaurant.id}`;
+      localStorage.setItem(cacheKey, JSON.stringify(data));
+      
       return data;
     },
     enabled: !!restaurant?.id,
+    initialData: () => {
+      if (!restaurant?.id) return [];
+      const cacheKey = activeCategory 
+        ? `menuItems_${restaurant.id}_${activeCategory}` 
+        : `menuItems_${restaurant.id}`;
+      const cachedData = localStorage.getItem(cacheKey);
+      return cachedData ? JSON.parse(cachedData) : [];
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutos
   });
 
-  // Set initial active category when categories are loadeds
+  // Set initial active category when categories are loaded
   useEffect(() => {
     if (categories.length > 0 && !activeCategory) {
       setActiveCategory(categories[0].id);
@@ -130,6 +182,11 @@ const RestaurantMenu = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {isOffline && (
+        <div className="bg-amber-500 text-white text-center py-1 px-4">
+          Você está no modo offline. Alguns recursos podem estar limitados.
+        </div>
+      )}
       <Header 
         onSearch={setSearchQuery} 
         onHeaderHeightChange={setHeaderHeight}
