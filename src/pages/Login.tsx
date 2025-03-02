@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -111,16 +110,16 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-secondary/50">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--background)' }}>
+      <Card className="w-full max-w-md" style={{ backgroundColor: 'var(--background)'}}>
         <CardHeader>
-          <h1 className="font-display text-2xl font-bold text-center">Área Administrativa</h1>
-          <p className="text-center text-muted-foreground">Entre para gerenciar seu cardápio</p>
+          <h1 className="font-display text-2xl font-bold text-center" style={{ color: 'var(--text)' }}>Área Administrativa</h1>
+          <p className="text-center" style={{ color: 'var(--text)' }}>Entre para gerenciar seu cardápio</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
+              <label htmlFor="email" className="text-sm font-medium" style={{ color: 'var(--text)' }}>
                 Email
               </label>
               <Input
@@ -130,10 +129,11 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                style={{ backgroundColor: 'var(--background)', color: 'var(--text)'}}
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
+              <label htmlFor="password" className="text-sm font-medium" style={{ color: 'var(--text)' }}>
                 Senha
               </label>
               <Input
@@ -142,9 +142,15 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                style={{ backgroundColor: 'var(--background)', color: 'var(--text)'}}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={loading}
+              style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
+            >
               {loading ? "Entrando..." : "Entrar"}
             </Button>
           </form>
@@ -152,8 +158,9 @@ const Login = () => {
         <CardFooter className="flex flex-col gap-4">
           <Button
             variant="link"
-            className="text-sm text-muted-foreground"
+            className="text-sm"
             onClick={handleResetPassword}
+            style={{ color: 'var(--secondary)' }}
           >
             Esqueceu sua senha?
           </Button>

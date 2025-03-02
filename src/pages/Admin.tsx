@@ -390,14 +390,14 @@ const Admin = () => {
       <div className="container mx-auto py-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold" style={{ color: 'var(--text)' }}>Painel Administrativo</h1>
-          <Button variant="outline" onClick={handleLogout} style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}>
+          <Button variant="outline" onClick={handleLogout} style={{ backgroundColor: 'var(--background)', color: 'var(--text)'}}>
             Sair
           </Button>
         </div>
 
         <div className="grid gap-8">
           {/* Categories Section */}
-          <Card style={{ backgroundColor: 'var(--background)', borderColor: 'var(--secondary)' }}>
+          <Card style={{ backgroundColor: 'var(--background)'}}>
             <CardHeader className="flex flex-row items-center justify-between">
               <h2 className="text-2xl font-semibold" style={{ color: 'var(--text)' }}>Categorias</h2>
               <Button 
@@ -440,7 +440,7 @@ const Admin = () => {
                                     size="sm"
                                     className="mr-2"
                                     onClick={() => handleEditCategory(category)}
-                                    style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}
+                                    style={{ backgroundColor: 'var(--background)', color: 'var(--text)'}}
                                   >
                                     Editar
                                   </Button>
@@ -467,9 +467,9 @@ const Admin = () => {
           </Card>
 
           {/* Menu Items Section */}
-          <Card style={{ backgroundColor: 'var(--background)', borderColor: 'var(--secondary)' }}>
+          <Card style={{ backgroundColor: 'var(--background)'}}>
             <CardHeader className="flex flex-row items-center justify-between">
-              <h2 className="text-2xl font-semibold" style={{ color: 'var(--primary)' }}>Itens do Cardápio</h2>
+              <h2 className="text-2xl font-semibold" style={{ color: 'var(--text)' }}>Itens do Cardápio</h2>
               <Button 
                 onClick={() => {
                   setSelectedMenuItem(undefined);
@@ -545,7 +545,7 @@ const Admin = () => {
                                             size="sm"
                                             className="mr-2"
                                             onClick={() => handleEditMenuItem(item)}
-                                            style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}
+                                            style={{ backgroundColor: 'var(--background)', color: 'var(--text)'}}
                                           >
                                             Editar
                                           </Button>
