@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, Download, Share2, Copy } from 'lucide-react';
+import { Loader2, Download, Share2, Copy, Share } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { QRCodeSVG } from 'qrcode.react';
@@ -139,45 +139,31 @@ export function QRCodeGenerator({ restaurantId }: QRCodeGeneratorProps) {
 
   // Função para copiar a URL para a área de transferência
   const copyUrl = () => {
-    navigator.clipboard.writeText(menuUrl)
-      .then(() => {
-        toast({
-          title: "URL do cardápio copiada!",
-        });
-      })
-      .catch(() => {
-        toast({
-          title: "Erro ao copiar URL",
-          variant: "destructive",
-        });
-      });
-  };
-
-  // Função para compartilhar (usando a Web Share API)
-  const shareQRCode = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: `Cardápio - ${restaurantInfo?.name || 'Restaurante'}`,
-        text: 'Acesse nosso cardápio digital!',
-        url: menuUrl,
-      })
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(menuUrl)
         .then(() => {
           toast({
-            title: "Compartilhado com sucesso!",
+            title: "URL do cardápio copiada!",
           });
         })
-        .catch(() => {
+        .catch((error) => {
+          console.error("Erro ao copiar URL:", error);
           toast({
-            title: "Erro ao compartilhar",
+            title: "Erro ao copiar URL",
             variant: "destructive",
           });
         });
     } else {
-      // Fallback para navegadores que não suportam Web Share API
-      copyUrl();
+      // Fallback para navegadores que não suportam Clipboard API
+      const tempInput = document.createElement('input');
+      tempInput.value = menuUrl;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+  
       toast({
-        title: "URL copiada para a área de transferência",
-        description: "Compartilhe esta URL com seus clientes",
+        title: "URL copiada para a área de transferência!",
       });
     }
   };
@@ -219,10 +205,6 @@ export function QRCodeGenerator({ restaurantId }: QRCodeGeneratorProps) {
         <Button onClick={downloadQRCode} variant="outline">
           <Download className="w-4 h-4 mr-2" />
           Baixar
-        </Button>
-        <Button onClick={shareQRCode} variant="outline">
-          <Share2 className="w-4 h-4 mr-2" />
-          Compartilhar
         </Button>
         <Button onClick={copyUrl} variant="outline">
           <Copy className="w-4 h-4 mr-2" />
