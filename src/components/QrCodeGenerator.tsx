@@ -40,7 +40,7 @@ export function QRCodeGenerator({ restaurantId }: QRCodeGeneratorProps) {
 
         setRestaurantInfo({ name: restaurant.name });
         // Crie a URL do cardápio - ajuste isso para sua estrutura de URLs
-        const menuPageUrl = `${window.location.origin}/menu/${restaurant.id}`;
+        const menuPageUrl = `https://pgmenu.com.br/${restaurant.name}`;
         setMenuUrl(menuPageUrl);
       } else {
         // Se foi passado um ID, buscar informações desse restaurante específico
@@ -62,7 +62,7 @@ export function QRCodeGenerator({ restaurantId }: QRCodeGeneratorProps) {
 
         setRestaurantInfo({ name: restaurant.name });
         // Crie a URL do cardápio
-        const menuPageUrl = `${window.location.origin}/menu/${restaurantId}`;
+        const menuPageUrl = `https://pgmenu.com.br/${restaurant.name}`;
         setMenuUrl(menuPageUrl);
       }
 
@@ -216,7 +216,7 @@ export function QRCodeGenerator({ restaurantId }: QRCodeGeneratorProps) {
       </CardContent>
 
       <CardFooter className="flex justify-center space-x-2">
-        <Button onClick={downloadQRCode} variant="default">
+        <Button onClick={downloadQRCode} variant="outline">
           <Download className="w-4 h-4 mr-2" />
           Baixar
         </Button>
