@@ -9,6 +9,8 @@ export interface MenuItem {
   dietary_info?: string[];
   created_at: string;
   updated_at: string;
+  active: boolean;
+  order_itens?: number; // Adicione esta linha
 }
 
 export interface Category {
@@ -36,4 +38,11 @@ export interface Restaurant {
   };
   created_at: string;
   updated_at: string;
+  customization?: {
+    primaryColor?: string;
+    secondaryColor?: string;
+    backgroundColor?: string;
+    textColor?: string;
+    layout?: "grid" | "list";
+  };
 }

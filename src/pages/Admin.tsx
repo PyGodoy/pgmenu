@@ -26,6 +26,13 @@ import { MenuItem, Category } from '@/types';
 import { CategoryDialog } from '@/components/CategoryDialog';
 import { MenuItemDialog } from '@/components/MenuItemDialog';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from 'lucide-react';
 
 const Admin = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -40,6 +47,7 @@ const Admin = () => {
   const [menuItemToDelete, setMenuItemToDelete] = useState<MenuItem | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [openCategory, setOpenCategory] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -63,6 +71,38 @@ const Admin = () => {
 
     checkAuth();
   }, [navigate]);
+
+  const toggleItemActive = async (item: MenuItem) => {
+    try {
+      const { error } = await supabase
+        .from('menu_items')
+        .update({ active: !item.active })
+        .eq('id', item.id);
+
+      if (error) throw error;
+
+      // Atualizar localmente o estado do item sem recarregar todos os dados
+      setMenuItems(currentItems =>
+        currentItems.map(menuItem =>
+          menuItem.id === item.id
+            ? { ...menuItem, active: !menuItem.active }
+            : menuItem
+        )
+      );
+
+      toast({
+        title: `Item ${item.active ? 'desativado' : 'ativado'} com sucesso!`,
+      });
+
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao alterar status do item",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -104,7 +144,7 @@ const Admin = () => {
         .from('menu_items')
         .select('*, category:categories(name)')
         .eq('restaurant_id', restaurantId) // 🔹 Filtrando pelo restaurante correto
-        .order('name');
+        .order('order_itens'); // Ordenar por `order_itens`
   
       if (menuItemsError) throw menuItemsError;
       setMenuItems(menuItemsData);
@@ -122,6 +162,20 @@ const Admin = () => {
   useEffect(() => {
     fetchData();
   }, [toast]);
+
+  // Agrupar itens do cardápio por categoria
+  const groupedMenuItems = categories.map((category) => ({
+    ...category,
+    items: menuItems.filter((item) => item.category_id === category.id),
+  }));
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-lg">Carregando...</p>
+      </div>
+    );
+  }
 
   const handleEditCategory = (category: Category) => {
     setSelectedCategory(category);
@@ -204,7 +258,8 @@ const Admin = () => {
     navigate('/login');
   };
 
-  const onDragEnd = (result: any) => {
+  // Função para reordenar as categorias
+  const onDragEndCategories = (result: any) => {
     if (!result.destination) return;
 
     const reorderedCategories = Array.from(categories);
@@ -221,15 +276,14 @@ const Admin = () => {
     try {
       const updates = reorderedCategories.map((category, index) => ({
         id: category.id,
-        name: category.name, // Adiciona o nome
-        slug: category.slug, // Adiciona o slug
-        order: index, // Mantém a posição
+        name: category.name,
+        slug: category.slug,
+        order: index,
       }));
   
-      // Usar .update() para atualizar apenas a coluna `order`
       const { error } = await supabase
         .from('categories')
-        .upsert(updates, { onConflict: 'id' }); // Usar onConflict para garantir que apenas a ordem seja atualizada
+        .upsert(updates, { onConflict: 'id' });
   
       if (error) throw error;
   
@@ -245,13 +299,91 @@ const Admin = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-lg">Carregando...</p>
-      </div>
+  // Função para reordenar os itens
+  const onDragEndItems = (result: any) => {
+    const { destination, source, draggableId } = result;
+
+    // Se o item for solto fora da lista, não faça nada
+    if (!destination) return;
+
+    // Se o item for solto no mesmo lugar, não faça nada
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+
+    // Encontrar a categoria correspondente
+    const categoryId = source.droppableId;
+    const category = groupedMenuItems.find((cat) => cat.id.toString() === categoryId);
+
+    if (!category) return;
+
+    // Reordenar os itens da categoria
+    const newItems = Array.from(category.items);
+    const [removed] = newItems.splice(source.index, 1);
+    newItems.splice(destination.index, 0, removed);
+
+    // Atualizar o estado local
+    const updatedCategories = groupedMenuItems.map((cat) =>
+      cat.id.toString() === categoryId
+        ? { ...cat, items: newItems }
+        : cat
     );
-  }
+
+    // Atualizar o estado global dos itens
+    const updatedMenuItems = updatedCategories.flatMap((cat) => cat.items);
+    setMenuItems(updatedMenuItems);
+
+    // Atualizar a ordem no banco de dados
+    updateItemOrder(newItems, categoryId);
+  };
+
+  // Função para atualizar a ordem dos itens no banco de dados
+  const updateItemOrder = async (items: MenuItem[], categoryId: string) => {
+    try {
+      const updates = items.map((item, index) => ({
+        id: item.id,
+        name: item.name, // Certifique-se de que 'name' está presente
+        price: item.price, // Adicione o campo 'price' ao objeto
+        order_itens: index, // Atualize a posição do item
+      }));
+  
+      // Verifique se algum item tem o campo 'name' ou 'price' faltando
+      const invalidItems = updates.filter(item => !item.name || item.price == null);
+      if (invalidItems.length > 0) {
+        console.error("Items com 'name' ou 'price' inválido:", invalidItems);
+        toast({
+          title: "Erro ao atualizar a ordem dos itens",
+          description: "Alguns itens não possuem nome ou preço válido.",
+          variant: "destructive",
+        });
+        return;
+      }
+  
+      console.log("Updates:", updates); // Verifique os dados que serão enviados
+  
+      const { error } = await supabase
+        .from("menu_items")
+        .upsert(updates, { onConflict: "id" });
+  
+      if (error) throw error;
+  
+      toast({
+        title: "Ordem dos itens atualizada com sucesso!",
+      });
+    } catch (error: any) {
+      console.error("Erro ao atualizar a ordem dos itens:", error.message);
+      toast({
+        title: "Erro ao atualizar a ordem dos itens",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+  
+  
 
   return (
     <div className="min-h-screen bg-background">
@@ -276,7 +408,7 @@ const Admin = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <DragDropContext onDragEnd={onDragEnd}>
+              <DragDropContext onDragEnd={onDragEndCategories}>
                 <Droppable droppableId="categories">
                   {(provided) => (
                     <Table ref={provided.innerRef} {...provided.droppableProps}>
@@ -340,47 +472,102 @@ const Admin = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Preço</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {menuItems.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.name}</TableCell>
-                      <TableCell>
-                        {new Intl.NumberFormat('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL'
-                        }).format(item.price)}
-                      </TableCell>
-                      <TableCell>{(item as any).category?.name}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="mr-2"
-                          onClick={() => handleEditMenuItem(item)}
-                        >
-                          Editar
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeleteMenuItem(item)}
-                        >
-                          Excluir
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <Accordion 
+                type="single" 
+                collapsible
+                value={openCategory}
+                onValueChange={setOpenCategory}
+              >
+                {groupedMenuItems.map((category) => (
+                  <AccordionItem key={category.id} value={category.id.toString()}>
+                    <AccordionTrigger>
+                      <div className="flex items-center justify-between w-full">
+                        <span>{category.name}</span>
+                        <span className="text-sm text-gray-500">
+                          {category.items.length} itens
+                        </span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <DragDropContext onDragEnd={onDragEndItems}>
+                        <Droppable droppableId={category.id.toString()}>
+                          {(provided) => (
+                            <Table ref={provided.innerRef} {...provided.droppableProps}>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Nome</TableHead>
+                                  <TableHead>Preço</TableHead>
+                                  <TableHead>Status</TableHead>
+                                  <TableHead>Ações</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {category.items.map((item, index) => (
+                                  <Draggable key={item.id} draggableId={item.id.toString()} index={index}>
+                                    {(provided) => (
+                                      <TableRow
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        {...provided.dragHandleProps}
+                                        className={!item.active ? "opacity-60" : ""}
+                                      >
+                                        <TableCell>{item.name}</TableCell>
+                                        <TableCell>
+                                          {new Intl.NumberFormat("pt-BR", {
+                                            style: "currency",
+                                            currency: "BRL",
+                                          }).format(item.price)}
+                                        </TableCell>
+                                        <TableCell>
+                                          <span
+                                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                              item.active
+                                                ? "bg-green-100 text-green-800"
+                                                : "bg-gray-100 text-gray-800"
+                                            }`}
+                                          >
+                                            {item.active ? "Ativo" : "Desativado"}
+                                          </span>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="mr-2"
+                                            onClick={() => handleEditMenuItem(item)}
+                                          >
+                                            Editar
+                                          </Button>
+                                          <Button
+                                            variant={item.active ? "secondary" : "default"}
+                                            size="sm"
+                                            className="mr-2"
+                                            onClick={() => toggleItemActive(item)}
+                                          >
+                                            {item.active ? "Desativar" : "Ativar"}
+                                          </Button>
+                                          <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() => handleDeleteMenuItem(item)}
+                                          >
+                                            Excluir
+                                          </Button>
+                                        </TableCell>
+                                      </TableRow>
+                                    )}
+                                  </Draggable>
+                                ))}
+                                {provided.placeholder}
+                              </TableBody>
+                            </Table>
+                          )}
+                        </Droppable>
+                      </DragDropContext>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
             </CardContent>
           </Card>
         </div>
@@ -400,23 +587,23 @@ const Admin = () => {
           onSuccess={fetchData}
         />
 
-        <AlertDialog 
-          open={deleteDialogOpen} 
+        <AlertDialog
+          open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
         >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
               <AlertDialogDescription>
-                {categoryToDelete 
-                  ? "Tem certeza que deseja excluir esta categoria?" 
-                  : "Tem certeza que deseja excluir este item?"} 
+                {categoryToDelete
+                  ? "Tem certeza que deseja excluir esta categoria?"
+                  : "Tem certeza que deseja excluir este item?"}
                 Esta ação não pode ser desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction 
+              <AlertDialogAction
                 onClick={categoryToDelete ? confirmDeleteCategory : confirmDeleteMenuItem}
               >
                 Confirmar

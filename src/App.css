@@ -5,6 +5,13 @@
   text-align: center;
 }
 
+:root {
+  --primary: #007bff; /* Cor primária padrão */
+  --secondary: #6c757d; /* Cor secundária padrão */
+  --background: #ffffff; /* Cor de fundo padrão */
+  --text: #000000; /* Cor do texto padrão */
+}
+
 .logo {
   height: 6em;
   padding: 1.5em;
@@ -40,3 +47,4 @@
 .read-the-docs {
   color: #888;
 }
+

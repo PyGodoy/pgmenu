@@ -18,6 +18,13 @@ export interface Database {
           updated_at: string | null
           slug: string
           owner_id: string | null
+          customization?: {
+            primaryColor?: string;
+            secondaryColor?: string;
+            backgroundColor?: string;
+            textColor?: string;
+            layout?: "grid" | "list";
+          };
         }
         Insert: {
           id?: number
@@ -33,6 +40,13 @@ export interface Database {
           updated_at?: string | null
           slug: string
           user_id?: string | null
+          customization?: {
+            primaryColor?: string;
+            secondaryColor?: string;
+            backgroundColor?: string;
+            textColor?: string;
+            layout?: "grid" | "list";
+          };
         }
         Update: {
           id?: number
@@ -48,6 +62,13 @@ export interface Database {
           updated_at?: string | null
           slug?: string
           user_id?: string | null
+          customization?: {
+            primaryColor?: string;
+            secondaryColor?: string;
+            backgroundColor?: string;
+            textColor?: string;
+            layout?: "grid" | "list";
+          };
         }
         Relationships: [
           {
@@ -106,6 +127,8 @@ export interface Database {
           updated_at: string | null
           dietary_info: string[] | null
           restaurant_id: number | null
+          active: boolean;
+          order_itens: number | null
         }
         Insert: {
           id?: number
@@ -118,6 +141,8 @@ export interface Database {
           updated_at?: string | null
           dietary_info?: string[] | null
           restaurant_id?: number | null
+          active?: boolean;
+          order_itens: number | null
         }
         Update: {
           id?: number
@@ -130,6 +155,8 @@ export interface Database {
           updated_at?: string | null
           dietary_info?: string[] | null
           restaurant_id?: number | null
+          active?: boolean;
+          order_itens: number | null
         }
         Relationships: [
           {

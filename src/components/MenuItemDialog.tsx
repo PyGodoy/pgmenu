@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Switch } from "@/components/ui/switch"; // Importe o componente Switch
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageIcon, Loader2 } from "lucide-react";
+import { clsx } from "clsx"; // Importe o clsx
 import {
   Select,
   SelectContent,
@@ -32,7 +34,8 @@ const menuItemSchema = z.object({
   price: z.string().min(1, "Preço é obrigatório").transform((val) => parseFloat(val)),
   category_id: z.string().min(1, "Categoria é obrigatória").transform((val) => parseInt(val)),
   image: z.instanceof(File).optional(),
-  image_url: z.string().min(1, "Imagem é obrigatória"),
+  image_url: z.string().optional(), // Torna o campo image_url opcional
+  active: z.boolean(),
 });
 
 type MenuItemFormData = z.infer<typeof menuItemSchema>;
@@ -66,33 +69,36 @@ export function MenuItemDialog({
       price: menuItem?.price?.toString() || "", // Fixed this line
       category_id: menuItem?.category_id?.toString() || "",
       image_url: menuItem?.image_url || "",
+      active: menuItem?.active || true, // Adicione esta linha
     },
   });
 
   useEffect(() => {
-      if (open && menuItem) {
-        // Atualiza os valores do formulário
-        form.reset({
-          name: menuItem.name,
-          description: menuItem.description,
-          price: menuItem.price || "",
-          category_id: menuItem.category_id || "",
-          image_url: menuItem.image_url || "",
-        });
-        // Atualiza a preview da imagem
-        setPreviewUrl(menuItem.image_url || "");
-      } else if (!open) {
-        // Limpa o formulário quando fecha o modal
-        form.reset({
-          name: "",
-          description: "",
-          price: "",
-          category_id: "",
-          image_url: "",
-        });
-        setPreviewUrl("");
-      }
-    }, [open, menuItem, form]);
+    if (open && menuItem) {
+      // Atualiza os valores do formulário
+      form.reset({
+        name: menuItem.name,
+        description: menuItem.description,
+        price: menuItem.price?.toString() || "", // Garantir que o preço seja uma string
+        category_id: menuItem.category_id?.toString() || "", // Garantir que o category_id seja uma string
+        image_url: menuItem.image_url || "",
+        active: menuItem.active, // Use o valor atual do item
+      });
+      // Atualiza a preview da imagem
+      setPreviewUrl(menuItem.image_url || "");
+    } else if (!open) {
+      // Limpa o formulário quando fecha o modal
+      form.reset({
+        name: "",
+        description: "",
+        price: "",
+        category_id: "",
+        image_url: "",
+        active: true, // Adicione esta linha
+      });
+      setPreviewUrl("");
+    }
+  }, [open, menuItem, form]);
 
   // Rest of the component code remains the same...
   
@@ -156,10 +162,11 @@ export function MenuItemDialog({
         description: data.description,
         price: data.price,
         category_id: data.category_id,
-        image_url: data.image_url,
+        image_url: data.image_url || null, // Permite que image_url seja null
         restaurant_id: restaurant.id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        active: data.active,
       };
   
       if (isEditing && menuItem) {
@@ -170,7 +177,8 @@ export function MenuItemDialog({
             description: data.description,
             price: data.price,
             category_id: data.category_id,
-            image_url: data.image_url,
+            image_url: data.image_url || null, // Permite que image_url seja null
+            active: data.active,
             updated_at: new Date().toISOString(),
           })
           .eq("id", menuItem.id);
@@ -183,7 +191,17 @@ export function MenuItemDialog({
       } else {
         const { error } = await supabase
           .from("menu_items")
-          .insert([menuItemData]);
+          .insert([{
+            name: data.name,
+            description: data.description,
+            price: data.price,
+            category_id: data.category_id,
+            image_url: data.image_url || null, // Permite que image_url seja null
+            restaurant_id: restaurant.id,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            active: data.active,
+          }]);
   
         if (error) throw error;
   
@@ -251,25 +269,26 @@ export function MenuItemDialog({
             />
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Preço</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        type="number" 
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00" 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Preço</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      type="number" 
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00" 
+                      onChange={(e) => field.onChange(e.target.value)} // Garantir que o valor seja uma string
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
               <FormField
                 control={form.control}
@@ -305,48 +324,69 @@ export function MenuItemDialog({
 
             <FormField
               control={form.control}
-              name="image"
-              render={() => (
-                <FormItem>
-                  <FormLabel>Imagem</FormLabel>
+              name="active"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <FormLabel>Ativo</FormLabel>
                   <FormControl>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-4">
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              handleImageUpload(file);
-                            }
-                          }}
-                          className="flex-1"
-                        />
-                        {uploadLoading && (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        )}
-                      </div>
-                      {previewUrl && (
-                        <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-muted">
-                          <img
-                            src={previewUrl}
-                            alt="Preview"
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className={clsx(
+                        "data-[state=checked]:bg-green-500", // Cor verde quando ativo
+                        "data-[state=unchecked]:bg-red-500" // Cor cinza quando inativo
                       )}
-                      {!previewUrl && (
-                        <div className="flex aspect-video w-full items-center justify-center rounded-lg border bg-muted">
-                          <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                      )}
-                    </div>
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+<FormField
+  control={form.control}
+  name="image"
+  render={() => (
+    <FormItem>
+      <FormLabel>Imagem (Opcional)</FormLabel> {/* Adicione "(Opcional)" ao label */}
+      <FormControl>
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <Input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleImageUpload(file);
+                }
+              }}
+              className="flex-1"
+            />
+            {uploadLoading && (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            )}
+          </div>
+          {previewUrl && (
+            <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-muted">
+              <img
+                src={previewUrl}
+                alt="Preview"
+                className="h-full w-full object-cover"
+              />
+            </div>
+          )}
+          {!previewUrl && (
+            <div className="flex aspect-video w-full items-center justify-center rounded-lg border bg-muted">
+              <ImageIcon className="h-8 w-8 text-muted-foreground" />
+            </div>
+          )}
+        </div>
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
 
             <div className="flex justify-end space-x-2">
               <Button

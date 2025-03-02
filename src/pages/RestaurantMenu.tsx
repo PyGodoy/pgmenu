@@ -44,10 +44,25 @@ const RestaurantMenu = () => {
           twitter: (data.social_media as any).twitter || undefined,
         } : {},
         created_at: data.created_at || '',
-        updated_at: data.updated_at || ''
+        updated_at: data.updated_at || '',
+        customization: data.customization || {}, // Adicionar o campo customization
       };
     },
   });
+
+  // Aplicar as personalizações dinamicamente
+  useEffect(() => {
+    if (restaurant?.customization) {
+      const { primaryColor, secondaryColor, backgroundColor, textColor } = restaurant.customization;
+
+      // Aplicar as cores ao documento
+      const root = document.documentElement;
+      if (primaryColor) root.style.setProperty('--primary', primaryColor);
+      if (secondaryColor) root.style.setProperty('--secondary', secondaryColor);
+      if (backgroundColor) root.style.setProperty('--background', backgroundColor);
+      if (textColor) root.style.setProperty('--text', textColor);
+    }
+  }, [restaurant]);
 
   // Fetch categories for this restaurant
   const { data: categories = [] } = useQuery<Category[]>({
@@ -77,7 +92,8 @@ const RestaurantMenu = () => {
         .from('menu_items')
         .select('*')
         .eq('restaurant_id', restaurant.id)
-        .order('name');
+        .eq('active', true) // Filtra apenas os itens ativos
+        .order('order_itens');
       
       if (activeCategory) {
         query = query.eq('category_id', activeCategory);
