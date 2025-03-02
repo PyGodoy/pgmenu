@@ -12,7 +12,7 @@ interface QRCodeGeneratorProps {
 
 export function QRCodeGenerator({ restaurantId }: QRCodeGeneratorProps) {
   const [menuUrl, setMenuUrl] = useState<string>('');
-  const [restaurantInfo, setRestaurantInfo] = useState<{ name: string } | null>(null);
+  const [restaurantInfo, setRestaurantInfo] = useState<{ name: string; slug: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const qrCodeRef = useRef<HTMLDivElement>(null); // Referência para o QR Code SVG
@@ -24,7 +24,7 @@ export function QRCodeGenerator({ restaurantId }: QRCodeGeneratorProps) {
         const { data: { user } } = await supabase.auth.getUser();
         const { data: restaurant, error } = await supabase
           .from('restaurants')
-          .select('id, name')
+          .select('id, name, slug') // Inclua o campo 'slug' na consulta
           .eq('owner_id', user?.id)
           .single();
 
@@ -38,15 +38,15 @@ export function QRCodeGenerator({ restaurantId }: QRCodeGeneratorProps) {
           return;
         }
 
-        setRestaurantInfo({ name: restaurant.name });
-        // Crie a URL do cardápio - ajuste isso para sua estrutura de URLs
-        const menuPageUrl = `https://pgmenu.com.br/${restaurant.name}`;
+        setRestaurantInfo({ name: restaurant.name, slug: restaurant.slug });
+        // Crie a URL do cardápio usando o slug
+        const menuPageUrl = `https://pgmenu.com.br/${restaurant.slug}`;
         setMenuUrl(menuPageUrl);
       } else {
         // Se foi passado um ID, buscar informações desse restaurante específico
         const { data: restaurant, error } = await supabase
           .from('restaurants')
-          .select('id, name')
+          .select('id, name, slug') // Inclua o campo 'slug' na consulta
           .eq('id', restaurantId)
           .single();
 
@@ -60,9 +60,9 @@ export function QRCodeGenerator({ restaurantId }: QRCodeGeneratorProps) {
           return;
         }
 
-        setRestaurantInfo({ name: restaurant.name });
-        // Crie a URL do cardápio
-        const menuPageUrl = `https://pgmenu.com.br/${restaurant.name}`;
+        setRestaurantInfo({ name: restaurant.name, slug: restaurant.slug });
+        // Crie a URL do cardápio usando o slug
+        const menuPageUrl = `https://pgmenu.com.br/${restaurant.slug}`;
         setMenuUrl(menuPageUrl);
       }
 
