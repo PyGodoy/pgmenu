@@ -172,9 +172,9 @@ export function CategoryDialog({ open, onOpenChange, category, onSuccess }: Cate
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent style={{ backgroundColor: 'var(--background)' }}>
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle style={{ color: 'var(--primary)' }}>
             {isEditing ? "Editar Categoria" : "Nova Categoria"}
           </DialogTitle>
         </DialogHeader>
@@ -186,9 +186,13 @@ export function CategoryDialog({ open, onOpenChange, category, onSuccess }: Cate
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nome</FormLabel>
+                  <FormLabel style={{ color: 'var(--text)' }}>Nome</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Nome da categoria" />
+                    <Input 
+                      {...field} 
+                      placeholder="Nome da categoria" 
+                      style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -200,9 +204,13 @@ export function CategoryDialog({ open, onOpenChange, category, onSuccess }: Cate
               name="slug"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Slug</FormLabel>
+                  <FormLabel style={{ color: 'var(--text)' }}>Slug</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="slug-da-categoria" />
+                    <Input 
+                      {...field} 
+                      placeholder="slug-da-categoria" 
+                      style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -214,7 +222,7 @@ export function CategoryDialog({ open, onOpenChange, category, onSuccess }: Cate
               name="banner_file"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Banner</FormLabel>
+                  <FormLabel style={{ color: 'var(--text)' }}>Banner</FormLabel>
                   <FormControl>
                     <div className="space-y-4">
                       <div className="flex items-center gap-4">
@@ -228,11 +236,14 @@ export function CategoryDialog({ open, onOpenChange, category, onSuccess }: Cate
                             }
                           }}
                           className="flex-1"
+                          style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}
                         />
-                        {uploadLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {uploadLoading && (
+                          <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--primary)' }} />
+                        )}
                       </div>
                       {previewUrl && (
-                        <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-muted">
+                        <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-muted" style={{ borderColor: 'var(--secondary)' }}>
                           <img
                             src={previewUrl}
                             alt="Preview do banner"
@@ -244,14 +255,15 @@ export function CategoryDialog({ open, onOpenChange, category, onSuccess }: Cate
                             size="icon"
                             className="absolute top-2 right-2"
                             onClick={handleRemoveBanner}
+                            style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       )}
                       {!previewUrl && (
-                        <div className="flex aspect-video w-full items-center justify-center rounded-lg border bg-muted">
-                          <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                        <div className="flex aspect-video w-full items-center justify-center rounded-lg border bg-muted" style={{ borderColor: 'var(--secondary)' }}>
+                          <ImageIcon className="h-8 w-8 text-muted-foreground" style={{ color: 'var(--primary)' }} />
                         </div>
                       )}
                     </div>
@@ -266,10 +278,15 @@ export function CategoryDialog({ open, onOpenChange, category, onSuccess }: Cate
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button 
+                type="submit" 
+                disabled={loading}
+                style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
+              >
                 {loading ? "Salvando..." : isEditing ? "Salvar" : "Criar"}
               </Button>
             </div>
