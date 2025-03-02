@@ -23,7 +23,7 @@ export const BackToTop = () => {
   };
 
   return (
-    <Button
+    <Button style={{ color: 'var(--text)' }}
       className={`back-to-top fixed bottom-8 right-8 rounded-full p-3 shadow-lg transition-all duration-300 ${
         isVisible ? "visible" : ""
       }`}
