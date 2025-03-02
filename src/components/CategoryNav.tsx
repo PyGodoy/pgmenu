@@ -55,8 +55,11 @@ export const CategoryNav = ({
       {/* Navegação que acompanha o scroll */}
       <div className="relative">
         <div 
-          className="fixed left-0 right-0 bg-white shadow-sm z-10" 
-          style={{ top: `${headerHeight}px` }}
+          className="fixed left-0 right-0 shadow-sm z-10" 
+          style={{ 
+            top: `${headerHeight}px`,
+            backgroundColor: 'var(--background)', // Aplica a cor de fundo personalizada
+          }}
         >
           <div className="container mx-auto px-4">
             <div className="flex overflow-x-auto scrollbar-hide">
@@ -66,9 +69,13 @@ export const CategoryNav = ({
                   onClick={() => onCategoryChange(category.id)}
                   className={`flex-shrink-0 px-4 py-2 text-sm font-medium ${
                     activeCategory === category.id
-                      ? "text-blue-600 border-b-2 border-blue-600"
+                      ? "border-b-2"
                       : "text-gray-500 hover:text-gray-700"
                   }`}
+                  style={{
+                    color: activeCategory === category.id ? 'var(--text)' : 'var(--primary)', // Aplica a cor do texto
+                    borderColor: activeCategory === category.id ? 'var(--text)' : 'transparent', // Aplica a cor da borda
+                  }}
                 >
                   {category.name}
                 </button>

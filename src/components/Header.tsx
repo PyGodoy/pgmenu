@@ -42,6 +42,7 @@ export const Header = ({ onSearch, onHeaderHeightChange, restaurant }: HeaderPro
       className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled ? "bg-white/90 backdrop-blur-md shadow-sm" : "bg-white"
       }`}
+      style={{ backgroundColor: 'var(--background)' }} // Aplica a cor de fundo personalizada
     >
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between gap-4">
@@ -51,14 +52,23 @@ export const Header = ({ onSearch, onHeaderHeightChange, restaurant }: HeaderPro
               <img
                 src={restaurant.logo_url}
                 alt={`Logo do ${restaurant.name}`}
-                className="h-10 w-10 rounded-full object-cover border-2 border-primary"
+                className="h-10 w-10 rounded-full object-cover border-2"
+                style={{ borderColor: 'var(--text)' }} // Aplica a cor da borda
               />
             )}
             <div className="text-left">
-              <h1 className="font-display text-xl font-bold text-primary">
+              <h1 
+                className="font-display text-xl font-bold"
+                style={{ color: 'var(--text)' }} // Aplica a cor do texto
+              >
                 {restaurant.name}
               </h1>
-              <p className="text-xs text-muted-foreground">{restaurant.description}</p>
+              <p 
+                className="text-xs"
+                style={{ color: 'var(--primary)' }} // Aplica a cor do texto
+              >
+                {restaurant.description}
+              </p>
             </div>
           </div>
 
@@ -67,10 +77,18 @@ export const Header = ({ onSearch, onHeaderHeightChange, restaurant }: HeaderPro
             <Input
               type="search"
               placeholder="Buscar..."
-              className="pl-8 pr-3 h-8 rounded-full border-gray-200 focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+              className="pl-8 pr-3 h-8 rounded-full focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+              style={{ 
+                backgroundColor: 'var(--background)', // Aplica a cor de fundo
+                borderColor: 'var(--text)', // Aplica a cor da borda
+                color: 'var(--text)', // Aplica a cor do texto
+              }}
               onChange={(e) => onSearch(e.target.value)}
             />
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Search 
+              className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none"
+              style={{ color: 'var(--text)' }} // Aplica a cor do ícone
+            />
           </div>
         </div>
       </div>

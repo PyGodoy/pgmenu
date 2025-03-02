@@ -12,7 +12,10 @@ export const MenuItem = ({ name, description, price, image_url }: MenuItemProps)
   const hasImage = !!image_url;
 
   return (
-    <Card className="group menu-item overflow-hidden hover:shadow-lg transition-shadow duration-300">
+    <Card 
+      className="group menu-item overflow-hidden hover:shadow-lg transition-shadow duration-300"
+      style={{ backgroundColor: 'var(--background)', color: 'var(--text)' }} // Aplica as cores personalizadas
+    >
       <CardContent className="p-0">
         {/* Renderiza o espaço da imagem apenas se houver uma imagem */}
         {hasImage && (
@@ -28,11 +31,17 @@ export const MenuItem = ({ name, description, price, image_url }: MenuItemProps)
         {/* Conteúdo textual */}
         <div className={`p-4 ${!hasImage ? "pt-6" : ""}`}>
           {/* Nome */}
-          <h3 className="font-display text-lg font-medium mb-1">
+          <h3 
+            className="font-display text-lg font-medium mb-1"
+            style={{ color: 'var(--primary)' }} // Aplica a cor primária
+          >
             {name}
           </h3>
           {/* Preço */}
-          <span className="font-medium text-primary whitespace-nowrap">
+          <span 
+            className="font-medium whitespace-nowrap"
+            style={{ color: 'var(--secondary)' }} // Aplica a cor secundária
+          >
             R${price.toFixed(2)}
           </span>
 
@@ -43,6 +52,7 @@ export const MenuItem = ({ name, description, price, image_url }: MenuItemProps)
               <button
                 onClick={() => setExpanded(!expanded)}
                 className="text-primary hover:underline ml-1"
+                style={{ color: 'var(--primary)' }} // Aplica a cor primária
               >
                 {expanded ? "Ver menos" : "Ver mais"}
               </button>

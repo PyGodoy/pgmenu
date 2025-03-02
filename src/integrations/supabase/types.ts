@@ -18,6 +18,13 @@ export interface Database {
           updated_at: string | null
           slug: string
           owner_id: string | null
+          customization?: {
+            primaryColor?: string;
+            secondaryColor?: string;
+            backgroundColor?: string;
+            textColor?: string;
+            layout?: "grid" | "list";
+          };
         }
         Insert: {
           id?: number
@@ -33,6 +40,13 @@ export interface Database {
           updated_at?: string | null
           slug: string
           user_id?: string | null
+          customization?: {
+            primaryColor?: string;
+            secondaryColor?: string;
+            backgroundColor?: string;
+            textColor?: string;
+            layout?: "grid" | "list";
+          };
         }
         Update: {
           id?: number
@@ -48,6 +62,13 @@ export interface Database {
           updated_at?: string | null
           slug?: string
           user_id?: string | null
+          customization?: {
+            primaryColor?: string;
+            secondaryColor?: string;
+            backgroundColor?: string;
+            textColor?: string;
+            layout?: "grid" | "list";
+          };
         }
         Relationships: [
           {

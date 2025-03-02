@@ -38,4 +38,11 @@ export interface Restaurant {
   };
   created_at: string;
   updated_at: string;
+  customization?: {
+    primaryColor?: string;
+    secondaryColor?: string;
+    backgroundColor?: string;
+    textColor?: string;
+    layout?: "grid" | "list";
+  };
 }

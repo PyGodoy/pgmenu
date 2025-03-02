@@ -21,7 +21,10 @@ export const Footer = ({ restaurant }: FooterProps) => {
   };
 
   return (
-    <footer className="bg-secondary mt-20 py-8">
+    <footer 
+      className="mt-20 py-8"
+      style={{ backgroundColor: 'var(--background)' }} // Aplica a cor de fundo personalizada
+    >
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 gap-8 text-center">
           {/* Logo e Sobre o restaurante */}
@@ -37,14 +40,21 @@ export const Footer = ({ restaurant }: FooterProps) => {
                 <img
                   src={restaurant.logo_url}
                   alt={`Logo do ${restaurant.name}`}
-                  className="h-16 w-16 rounded-full object-cover border-2 border-primary"
+                  className="h-16 w-16 rounded-full object-cover border-2"
+                  style={{ borderColor: 'var(--text)' }} // Aplica a cor da borda
                 />
               </div>
             )}
-            <h3 className="font-display text-lg font-semibold mb-3 text-primary">
+            <h3 
+              className="font-display text-lg font-semibold mb-3"
+              style={{ color: 'var(--text)' }} // Aplica a cor do texto
+            >
               {restaurant.name}
             </h3>
-            <p className="text-xs text-muted-foreground mb-4 max-w-md mx-auto">
+            <p 
+              className="text-xs mb-4 max-w-md mx-auto"
+              style={{ color: 'var(--primary)' }} // Aplica a cor do texto
+            >
               {restaurant.description}
             </p>
             {restaurant.social_media && (
@@ -54,7 +64,8 @@ export const Footer = ({ restaurant }: FooterProps) => {
                     href={restaurant.social_media.facebook}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary hover:text-primary-dark transition-colors duration-300"
+                    className="transition-colors duration-300"
+                    style={{ color: 'var(--primary)' }} // Aplica a cor do ícone
                   >
                     <FaFacebook size={18} />
                   </a>
@@ -64,7 +75,8 @@ export const Footer = ({ restaurant }: FooterProps) => {
                     href={restaurant.social_media.instagram}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary hover:text-primary-dark transition-colors duration-300"
+                    className="transition-colors duration-300"
+                    style={{ color: 'var(--primary)' }} // Aplica a cor do ícone
                   >
                     <FaInstagram size={18} />
                   </a>
@@ -74,7 +86,8 @@ export const Footer = ({ restaurant }: FooterProps) => {
                     href={restaurant.social_media.twitter}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary hover:text-primary-dark transition-colors duration-300"
+                    className="transition-colors duration-300"
+                    style={{ color: 'var(--primary)' }} // Aplica a cor do ícone
                   >
                     <FaTwitter size={18} />
                   </a>
@@ -91,19 +104,24 @@ export const Footer = ({ restaurant }: FooterProps) => {
             transition={{ duration: 0.5, delay: 0.4 }}
             className="flex flex-col items-center"
           >
-            <h4 className="font-semibold text-base mb-3 text-primary">Contato</h4>
-            <ul className="space-y-1 text-xs text-muted-foreground">
+            <h4 
+              className="font-semibold text-base mb-3"
+              style={{ color: 'var(--text)' }} // Aplica a cor do texto
+            >
+              Contato
+            </h4>
+            <ul className="space-y-1 text-xs">
               <li className="flex items-center justify-center gap-2">
-                <span className="text-primary">📍</span>
-                <span>{restaurant.address}</span>
+                <span style={{ color: 'var(--primary)' }}>📍</span>
+                <span style={{ color: 'var(--primary)' }}>{restaurant.address}</span>
               </li>
               <li className="flex items-center justify-center gap-2">
-                <span className="text-primary">📞</span>
-                <span>{restaurant.phone}</span>
+                <span style={{ color: 'var(--primary)' }}>📞</span>
+                <span style={{ color: 'var(--primary)' }}>{restaurant.phone}</span>
               </li>
               <li className="flex items-center justify-center gap-2">
-                <span className="text-primary">✉️</span>
-                <span>{restaurant.email}</span>
+                <span style={{ color: 'var(--primary)' }}>✉️</span>
+                <span style={{ color: 'var(--primary)' }}>{restaurant.email}</span>
               </li>
             </ul>
           </motion.div>
@@ -116,14 +134,17 @@ export const Footer = ({ restaurant }: FooterProps) => {
             transition={{ duration: 0.5, delay: 0.6 }}
             className="flex flex-col items-center"
           >
-            <h4 className="font-semibold text-base mb-3 text-primary">
+            <h4 
+              className="font-semibold text-base mb-3"
+              style={{ color: 'var(--text)' }} // Aplica a cor do texto
+            >
               Horário de Funcionamento
             </h4>
-            <ul className="space-y-1 text-xs text-muted-foreground">
+            <ul className="space-y-1 text-xs">
               {restaurant.hours_of_operation.split("\n").map((hours, index) => (
                 <li key={index} className="flex items-center justify-center gap-2">
-                  <span className="text-primary">⏰</span>
-                  <span>{hours}</span>
+                  <span style={{ color: 'var(--primary)' }}>⏰</span>
+                  <span style={{ color: 'var(--primary)' }}>{hours}</span>
                 </li>
               ))}
             </ul>
@@ -136,9 +157,13 @@ export const Footer = ({ restaurant }: FooterProps) => {
           whileInView="visible"
           variants={itemVariants}
           transition={{ duration: 0.5, delay: 0.8 }}
-          className="mt-8 pt-6 border-t border-gray-700 text-center"
+          className="mt-8 pt-6 border-t text-center"
+          style={{ borderColor: 'var(--primary)' }} // Aplica a cor da borda
         >
-          <p className="text-xs text-muted-foreground">
+          <p 
+            className="text-xs"
+            style={{ color: 'var(--primary)' }} // Aplica a cor do texto
+          >
             &copy; {currentYear} {restaurant.name}. Todos os direitos reservados.
           </p>
         </motion.div>
