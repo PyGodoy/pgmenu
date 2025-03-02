@@ -94,24 +94,24 @@ export function MenuItemDialog({
         price: "",
         category_id: "",
         image_url: "",
-        active: true, // Adicione esta linha
+        active: true, // Adicione esta linha.
       });
       setPreviewUrl("");
     }
   }, [open, menuItem, form]);
 
-  // Rest of the component code remains the same...
+  // Rest of the component code remains the same....
   
   const handleImageUpload = async (file: File) => {
     try {
       setUploadLoading(true);
       
-      // Generate a unique file name
+      // Generate a unique file names
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2)}${Date.now().toString()}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      // Upload the file to Supabase Storage
+      // Upload the file to Supabase Storages
       const { data, error } = await supabase.storage
         .from('menu-items')
         .upload(filePath, file);
@@ -123,7 +123,7 @@ export function MenuItemDialog({
         .from('menu-items')
         .getPublicUrl(filePath);
 
-      // Update the form with the new image URL
+      // Update the form with the new image URLs
       form.setValue('image_url', publicUrl);
       setPreviewUrl(publicUrl);
 
