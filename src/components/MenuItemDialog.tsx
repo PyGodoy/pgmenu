@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Switch } from "@/components/ui/switch"; // Importe o componente Switch
+import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageIcon, Loader2 } from "lucide-react";
-import { clsx } from "clsx"; // Importe o clsx
+import { clsx } from "clsx";
 import {
   Select,
   SelectContent,
@@ -94,24 +94,22 @@ export function MenuItemDialog({
         price: "",
         category_id: "",
         image_url: "",
-        active: true, // Adicione esta linha.
+        active: true, // Adicione esta linha
       });
       setPreviewUrl("");
     }
   }, [open, menuItem, form]);
 
-  // Rest of the component code remains the same....
-  
   const handleImageUpload = async (file: File) => {
     try {
       setUploadLoading(true);
       
-      // Generate a unique file names
+      // Generate a unique file name
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2)}${Date.now().toString()}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      // Upload the file to Supabase Storages
+      // Upload the file to Supabase Storage
       const { data, error } = await supabase.storage
         .from('menu-items')
         .upload(filePath, file);
@@ -123,7 +121,7 @@ export function MenuItemDialog({
         .from('menu-items')
         .getPublicUrl(filePath);
 
-      // Update the form with the new image URLs
+      // Update the form with the new image URL
       form.setValue('image_url', publicUrl);
       setPreviewUrl(publicUrl);
 
@@ -227,9 +225,9 @@ export function MenuItemDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl" style={{ backgroundColor: 'var(--background)' }}>
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle style={{ color: 'var(--primary)' }}>
             {isEditing ? "Editar Item" : "Novo Item"}
           </DialogTitle>
         </DialogHeader>
@@ -241,9 +239,13 @@ export function MenuItemDialog({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nome</FormLabel>
+                  <FormLabel style={{ color: 'var(--text)' }}>Nome</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Nome do item" />
+                    <Input 
+                      {...field} 
+                      placeholder="Nome do item" 
+                      style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -255,12 +257,13 @@ export function MenuItemDialog({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Descrição</FormLabel>
+                  <FormLabel style={{ color: 'var(--text)' }}>Descrição</FormLabel>
                   <FormControl>
                     <Textarea 
                       {...field} 
                       placeholder="Descreva o item"
                       className="min-h-[100px]"
+                      style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -269,47 +272,49 @@ export function MenuItemDialog({
             />
 
             <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="price"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Preço</FormLabel>
-                  <FormControl>
-                    <Input 
-                      {...field} 
-                      type="number" 
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00" 
-                      onChange={(e) => field.onChange(e.target.value)} // Garantir que o valor seja uma string
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel style={{ color: 'var(--text)' }}>Preço</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        type="number" 
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00" 
+                        onChange={(e) => field.onChange(e.target.value)} // Garantir que o valor seja uma string
+                        style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
                 name="category_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Categoria</FormLabel>
+                    <FormLabel style={{ color: 'var(--text)' }}>Categoria</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
                       defaultValue={field.value ? field.value.toString() : ""}
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}>
                           <SelectValue placeholder="Selecione uma categoria" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent style={{ backgroundColor: 'var(--background)', color: 'var(--text)' }}>
                         {categories.map((category) => (
                           <SelectItem 
                             key={category.id} 
                             value={category.id.toString()}
+                            style={{ backgroundColor: 'var(--background)', color: 'var(--text)' }}
                           >
                             {category.name}
                           </SelectItem>
@@ -326,8 +331,8 @@ export function MenuItemDialog({
               control={form.control}
               name="active"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <FormLabel>Ativo</FormLabel>
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4" style={{ borderColor: 'var(--secondary)' }}>
+                  <FormLabel style={{ color: 'var(--text)' }}>Ativo</FormLabel>
                   <FormControl>
                     <Switch
                       checked={field.value}
@@ -343,60 +348,66 @@ export function MenuItemDialog({
               )}
             />
 
-<FormField
-  control={form.control}
-  name="image"
-  render={() => (
-    <FormItem>
-      <FormLabel>Imagem (Opcional)</FormLabel> {/* Adicione "(Opcional)" ao label */}
-      <FormControl>
-        <div className="space-y-4">
-          <div className="flex items-center gap-4">
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  handleImageUpload(file);
-                }
-              }}
-              className="flex-1"
+            <FormField
+              control={form.control}
+              name="image"
+              render={() => (
+                <FormItem>
+                  <FormLabel style={{ color: 'var(--text)' }}>Imagem (Opcional)</FormLabel>
+                  <FormControl>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handleImageUpload(file);
+                            }
+                          }}
+                          className="flex-1"
+                          style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}
+                        />
+                        {uploadLoading && (
+                          <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--primary)' }} />
+                        )}
+                      </div>
+                      {previewUrl && (
+                        <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-muted" style={{ borderColor: 'var(--secondary)' }}>
+                          <img
+                            src={previewUrl}
+                            alt="Preview"
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      )}
+                      {!previewUrl && (
+                        <div className="flex aspect-video w-full items-center justify-center rounded-lg border bg-muted" style={{ borderColor: 'var(--secondary)' }}>
+                          <ImageIcon className="h-8 w-8 text-muted-foreground" style={{ color: 'var(--primary)' }} />
+                        </div>
+                      )}
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-            {uploadLoading && (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            )}
-          </div>
-          {previewUrl && (
-            <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-muted">
-              <img
-                src={previewUrl}
-                alt="Preview"
-                className="h-full w-full object-cover"
-              />
-            </div>
-          )}
-          {!previewUrl && (
-            <div className="flex aspect-video w-full items-center justify-center rounded-lg border bg-muted">
-              <ImageIcon className="h-8 w-8 text-muted-foreground" />
-            </div>
-          )}
-        </div>
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
 
             <div className="flex justify-end space-x-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button 
+                type="submit" 
+                disabled={loading}
+                style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
+              >
                 {loading ? "Salvando..." : isEditing ? "Salvar" : "Criar"}
               </Button>
             </div>
