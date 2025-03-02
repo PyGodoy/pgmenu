@@ -45,7 +45,7 @@ const RestaurantMenu = () => {
         } : {},
         created_at: data.created_at || '',
         updated_at: data.updated_at || '',
-        customization: data.customization || {}, // Adicionar o campo customization
+        customization: data.customization || {}, // Adicionar o campo customizations
       };
     },
   });
