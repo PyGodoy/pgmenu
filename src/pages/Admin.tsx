@@ -386,24 +386,27 @@ const Admin = () => {
   
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
       <div className="container mx-auto py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Painel Administrativo</h1>
-          <Button variant="outline" onClick={handleLogout}>
+          <h1 className="text-3xl font-bold" style={{ color: 'var(--text)' }}>Painel Administrativo</h1>
+          <Button variant="outline" onClick={handleLogout} style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}>
             Sair
           </Button>
         </div>
 
         <div className="grid gap-8">
           {/* Categories Section */}
-          <Card>
+          <Card style={{ backgroundColor: 'var(--background)', borderColor: 'var(--secondary)' }}>
             <CardHeader className="flex flex-row items-center justify-between">
-              <h2 className="text-2xl font-semibold">Categorias</h2>
-              <Button onClick={() => {
-                setSelectedCategory(undefined);
-                setCategoryDialogOpen(true);
-              }}>
+              <h2 className="text-2xl font-semibold" style={{ color: 'var(--text)' }}>Categorias</h2>
+              <Button 
+                onClick={() => {
+                  setSelectedCategory(undefined);
+                  setCategoryDialogOpen(true);
+                }}
+                style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
+              >
                 Adicionar Categoria
               </Button>
             </CardHeader>
@@ -414,9 +417,9 @@ const Admin = () => {
                     <Table ref={provided.innerRef} {...provided.droppableProps}>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Nome</TableHead>
-                          <TableHead>Slug</TableHead>
-                          <TableHead>Ações</TableHead>
+                          <TableHead style={{ color: 'var(--text)' }}>Nome</TableHead>
+                          <TableHead style={{ color: 'var(--text)' }}>Slug</TableHead>
+                          <TableHead style={{ color: 'var(--text)' }}>Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -427,6 +430,7 @@ const Admin = () => {
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
+                                style={{ backgroundColor: 'var(--background)', color: 'var(--text)' }}
                               >
                                 <TableCell>{category.name}</TableCell>
                                 <TableCell>{category.slug}</TableCell>
@@ -436,6 +440,7 @@ const Admin = () => {
                                     size="sm"
                                     className="mr-2"
                                     onClick={() => handleEditCategory(category)}
+                                    style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}
                                   >
                                     Editar
                                   </Button>
@@ -443,6 +448,7 @@ const Admin = () => {
                                     variant="destructive"
                                     size="sm"
                                     onClick={() => handleDeleteCategory(category)}
+                                    style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
                                   >
                                     Excluir
                                   </Button>
@@ -461,13 +467,16 @@ const Admin = () => {
           </Card>
 
           {/* Menu Items Section */}
-          <Card>
+          <Card style={{ backgroundColor: 'var(--background)', borderColor: 'var(--secondary)' }}>
             <CardHeader className="flex flex-row items-center justify-between">
-              <h2 className="text-2xl font-semibold">Itens do Cardápio</h2>
-              <Button onClick={() => {
-                setSelectedMenuItem(undefined);
-                setMenuItemDialogOpen(true);
-              }}>
+              <h2 className="text-2xl font-semibold" style={{ color: 'var(--primary)' }}>Itens do Cardápio</h2>
+              <Button 
+                onClick={() => {
+                  setSelectedMenuItem(undefined);
+                  setMenuItemDialogOpen(true);
+                }}
+                style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
+              >
                 Adicionar Item
               </Button>
             </CardHeader>
@@ -482,8 +491,8 @@ const Admin = () => {
                   <AccordionItem key={category.id} value={category.id.toString()}>
                     <AccordionTrigger>
                       <div className="flex items-center justify-between w-full">
-                        <span>{category.name}</span>
-                        <span className="text-sm text-gray-500">
+                        <span style={{ color: 'var(--text)' }}>{category.name}</span>
+                        <span className="text-sm" style={{ color: 'var(--text)' }}>
                           {category.items.length} itens
                         </span>
                       </div>
@@ -495,10 +504,10 @@ const Admin = () => {
                             <Table ref={provided.innerRef} {...provided.droppableProps}>
                               <TableHeader>
                                 <TableRow>
-                                  <TableHead>Nome</TableHead>
-                                  <TableHead>Preço</TableHead>
-                                  <TableHead>Status</TableHead>
-                                  <TableHead>Ações</TableHead>
+                                  <TableHead style={{ color: 'var(--text)' }}>Nome</TableHead>
+                                  <TableHead style={{ color: 'var(--text)' }}>Preço</TableHead>
+                                  <TableHead style={{ color: 'var(--text)' }}>Status</TableHead>
+                                  <TableHead style={{ color: 'var(--text)' }}>Ações</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -510,6 +519,7 @@ const Admin = () => {
                                         {...provided.draggableProps}
                                         {...provided.dragHandleProps}
                                         className={!item.active ? "opacity-60" : ""}
+                                        style={{ backgroundColor: 'var(--background)', color: 'var(--text)' }}
                                       >
                                         <TableCell>{item.name}</TableCell>
                                         <TableCell>
@@ -535,6 +545,7 @@ const Admin = () => {
                                             size="sm"
                                             className="mr-2"
                                             onClick={() => handleEditMenuItem(item)}
+                                            style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}
                                           >
                                             Editar
                                           </Button>
@@ -543,6 +554,7 @@ const Admin = () => {
                                             size="sm"
                                             className="mr-2"
                                             onClick={() => toggleItemActive(item)}
+                                            style={{ backgroundColor: item.active ? 'var(--primary)' : 'var(--background)', color: item.active ? 'var(--background)' : 'var(--text)' }}
                                           >
                                             {item.active ? "Desativar" : "Ativar"}
                                           </Button>
@@ -550,6 +562,7 @@ const Admin = () => {
                                             variant="destructive"
                                             size="sm"
                                             onClick={() => handleDeleteMenuItem(item)}
+                                            style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
                                           >
                                             Excluir
                                           </Button>
@@ -591,10 +604,10 @@ const Admin = () => {
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
         >
-          <AlertDialogContent>
+          <AlertDialogContent style={{ backgroundColor: 'var(--background)' }}>
             <AlertDialogHeader>
-              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-              <AlertDialogDescription>
+              <AlertDialogTitle style={{ color: 'var(--primary)' }}>Confirmar exclusão</AlertDialogTitle>
+              <AlertDialogDescription style={{ color: 'var(--text)' }}>
                 {categoryToDelete
                   ? "Tem certeza que deseja excluir esta categoria?"
                   : "Tem certeza que deseja excluir este item?"}
@@ -602,9 +615,12 @@ const Admin = () => {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}>
+                Cancelar
+              </AlertDialogCancel>
               <AlertDialogAction
                 onClick={categoryToDelete ? confirmDeleteCategory : confirmDeleteMenuItem}
+                style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
               >
                 Confirmar
               </AlertDialogAction>
