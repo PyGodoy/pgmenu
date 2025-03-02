@@ -7,13 +7,13 @@ import { MenuItem } from "@/components/MenuItem";
 import { Footer } from "@/components/Footer";
 import { BackToTop } from "@/components/BackToTop";
 import { supabase } from "@/integrations/supabase/client";
-import type { Category, MenuItem as MenuItemType } from "@/types";
+import type { Category, MenuItem as MenuItemType, Restaurant } from "@/types";
 
 const Index = () => {
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [headerHeight, setHeaderHeight] = useState(0);
-  const [restaurant, setRestaurant] = useState<any>(null);
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   // Monitorar o status da conexão
@@ -92,9 +92,11 @@ const Index = () => {
   });
 
   // Set initial active category when categories are loaded
-  if (categories.length > 0 && !activeCategory) {
-    setActiveCategory(categories[0].id);
-  }
+  useEffect(() => {
+    if (categories.length > 0 && !activeCategory) {
+      setActiveCategory(categories[0].id);
+    }
+  }, [categories, activeCategory]);
 
   const filteredItems = menuItems.filter((item) => {
     const matchesSearch = searchQuery === "" || 

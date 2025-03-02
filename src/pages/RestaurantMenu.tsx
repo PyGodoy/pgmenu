@@ -9,6 +9,7 @@ import { Footer } from "@/components/Footer";
 import { BackToTop } from "@/components/BackToTop";
 import { supabase } from "@/integrations/supabase/client";
 import type { Category, MenuItem as MenuItemType, Restaurant } from "@/types";
+import { Json } from "@/integrations/supabase/types";
 
 const RestaurantMenu = () => {
   const { restaurantSlug } = useParams();
@@ -45,7 +46,7 @@ const RestaurantMenu = () => {
       if (!data) throw new Error('Restaurant not found');
 
       // Transformar os dados para corresponder ao tipo Restaurant
-      const restaurantData = {
+      const restaurantData: Restaurant = {
         id: data.id,
         name: data.name,
         description: data.description || '',
@@ -61,7 +62,13 @@ const RestaurantMenu = () => {
         } : {},
         created_at: data.created_at || '',
         updated_at: data.updated_at || '',
-        customization: data.customization || {},
+        customization: data.customization ? {
+          primaryColor: (data.customization as any).primaryColor,
+          secondaryColor: (data.customization as any).secondaryColor,
+          backgroundColor: (data.customization as any).backgroundColor,
+          textColor: (data.customization as any).textColor,
+          layout: (data.customization as any).layout,
+        } : {},
       };
 
       // Salvar dados do restaurante no localStorage para acesso offline
