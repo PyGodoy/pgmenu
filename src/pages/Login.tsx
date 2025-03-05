@@ -10,6 +10,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -89,7 +90,10 @@ const Login = () => {
       return;
     }
 
+    setResetLoading(true);
+    
     try {
+      // Configura a URL de redirecionamento para a página de redefinição de senha
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
@@ -106,6 +110,8 @@ const Login = () => {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -160,9 +166,10 @@ const Login = () => {
             variant="link"
             className="text-sm"
             onClick={handleResetPassword}
+            disabled={resetLoading}
             style={{ color: 'var(--secondary)' }}
           >
-            Esqueceu sua senha?
+            {resetLoading ? "Enviando..." : "Esqueceu sua senha?"}
           </Button>
         </CardFooter>
       </Card>
