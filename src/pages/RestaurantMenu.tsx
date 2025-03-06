@@ -57,27 +57,23 @@ const RestaurantMenu = () => {
     if (restaurant) {
       // Atualizar o título da página
       document.title = `${restaurant.name} - PG Menu`;
-
+  
+      // Função para atualizar uma meta tag
+      const updateMetaTag = (property: string, content: string) => {
+        let metaTag = document.querySelector(`meta[property="${property}"]`);
+        if (!metaTag) {
+          metaTag = document.createElement('meta');
+          metaTag.setAttribute('property', property);
+          document.head.appendChild(metaTag);
+        }
+        metaTag.setAttribute('content', content);
+      };
+  
       // Atualizar as meta tags do Open Graph
-      const metaTitle = document.querySelector('meta[property="og:title"]');
-      if (metaTitle) {
-        metaTitle.setAttribute('content', `${restaurant.name} - PG Menu`);
-      }
-
-      const metaDescription = document.querySelector('meta[property="og:description"]');
-      if (metaDescription) {
-        metaDescription.setAttribute('content', restaurant.description || 'Cardápio digital do restaurante');
-      }
-
-      const metaUrl = document.querySelector('meta[property="og:url"]');
-      if (metaUrl) {
-        metaUrl.setAttribute('content', window.location.href);
-      }
-
-      const metaImage = document.querySelector('meta[property="og:image"]');
-      if (metaImage && restaurant.logo_url) {
-        metaImage.setAttribute('content', restaurant.logo_url);
-      }
+      updateMetaTag('og:title', `${restaurant.name} - PG Menu`);
+      updateMetaTag('og:description', restaurant.description || 'Cardápio digital do restaurante');
+      updateMetaTag('og:url', window.location.href);
+      updateMetaTag('og:image', restaurant.logo_url || '/default-image.png');
     }
   }, [restaurant]);
 
