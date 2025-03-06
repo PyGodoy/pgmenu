@@ -33,7 +33,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from 'lucide-react';
-import { QRCodeGenerator } from '@/components/QrcodeGenerator';
+import { QRCodeGenerator } from "@/components/QrCodeGenerator"
 import { motion, AnimatePresence } from "framer-motion";
 
 const Admin = () => {
