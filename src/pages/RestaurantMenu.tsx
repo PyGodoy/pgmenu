@@ -52,9 +52,32 @@ const RestaurantMenu = () => {
 
   // Aplicar as personalizações dinamicamente
 
+  // Atualizar as meta tags quando o restaurante for carregado
   useEffect(() => {
     if (restaurant) {
+      // Atualizar o título da página
       document.title = `${restaurant.name} - PG Menu`;
+
+      // Atualizar as meta tags do Open Graph
+      const metaTitle = document.querySelector('meta[property="og:title"]');
+      if (metaTitle) {
+        metaTitle.setAttribute('content', `${restaurant.name} - PG Menu`);
+      }
+
+      const metaDescription = document.querySelector('meta[property="og:description"]');
+      if (metaDescription) {
+        metaDescription.setAttribute('content', restaurant.description || 'Cardápio digital do restaurante');
+      }
+
+      const metaUrl = document.querySelector('meta[property="og:url"]');
+      if (metaUrl) {
+        metaUrl.setAttribute('content', window.location.href);
+      }
+
+      const metaImage = document.querySelector('meta[property="og:image"]');
+      if (metaImage && restaurant.logo_url) {
+        metaImage.setAttribute('content', restaurant.logo_url);
+      }
     }
   }, [restaurant]);
 
