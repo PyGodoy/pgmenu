@@ -57,7 +57,7 @@ const ResetPassword = () => {
         description: "Agora você pode fazer login com sua nova senha",
       });
 
-      // Redireciona para a página de login após redefinir a senha
+      // Redireciona para a página de login após redefinir a senha.
       navigate('/login');
     } catch (error: any) {
       toast({
