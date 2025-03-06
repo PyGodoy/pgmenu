@@ -51,6 +51,13 @@ const RestaurantMenu = () => {
   });
 
   // Aplicar as personalizações dinamicamente
+
+  useEffect(() => {
+    if (restaurant) {
+      document.title = `${restaurant.name} - PG Menu`;
+    }
+  }, [restaurant]);
+
   useEffect(() => {
     if (restaurant?.customization) {
       const { primaryColor, secondaryColor, backgroundColor, textColor } = restaurant.customization;
