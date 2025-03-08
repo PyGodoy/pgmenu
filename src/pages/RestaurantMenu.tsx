@@ -165,7 +165,7 @@ const RestaurantMenu = () => {
     enabled: !!restaurant?.id,
   });
 
-  // Set initial active category when categories are loaded
+  // Set initial active category when categories are loadeds
   useEffect(() => {
     if (categories.length > 0 && !activeCategory) {
       setActiveCategory(categories[0].id);
