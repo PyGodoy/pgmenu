@@ -338,8 +338,9 @@ export function MenuItemDialog({
                       checked={field.value}
                       onCheckedChange={field.onChange}
                       className={clsx(
-                        "data-[state=checked]:bg-green-500", // Cor verde quando ativo
-                        "data-[state=unchecked]:bg-red-500" // Cor cinza quando inativo
+                        "data-[state=checked]:bg-green-400", // Verde mais suave
+                        "data-[state=unchecked]:bg-red-300", // Cinza mais suave
+                        "transition-colors duration-200" // Transição suave
                       )}
                     />
                   </FormControl>
