@@ -34,7 +34,7 @@ export interface Restaurant {
   social_media?: {
     facebook?: string;
     instagram?: string;
-    twitter?: string;
+    whatsapp?: string;
   };
   created_at: string;
   updated_at: string;

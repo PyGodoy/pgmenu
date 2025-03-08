@@ -1,5 +1,5 @@
 import type { Restaurant } from "@/types";
-import { FaFacebook, FaInstagram, FaTwitter } from "react-icons/fa";
+import { FaFacebook, FaInstagram, FaWhatsapp } from "react-icons/fa";
 import { motion } from "framer-motion";
 
 interface FooterProps {
@@ -12,7 +12,7 @@ export const Footer = ({ restaurant }: FooterProps) => {
   const socialIcons: Record<string, JSX.Element> = {
     facebook: <FaFacebook />,
     instagram: <FaInstagram />,
-    twitter: <FaTwitter />,
+    whatsapp: <FaWhatsapp />,
   };
 
   const itemVariants = {
@@ -81,15 +81,15 @@ export const Footer = ({ restaurant }: FooterProps) => {
                     <FaInstagram size={18} />
                   </a>
                 )}
-                {restaurant.social_media.twitter && (
+                {restaurant.social_media.whatsapp && (
                   <a
-                    href={restaurant.social_media.twitter}
+                    href={restaurant.social_media.whatsapp}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="transition-colors duration-300"
                     style={{ color: 'var(--primary)' }} // Aplica a cor do ícone
                   >
-                    <FaTwitter size={18} />
+                    <FaWhatsapp size={18} />
                   </a>
                 )}
               </div>

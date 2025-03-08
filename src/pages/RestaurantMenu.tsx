@@ -43,7 +43,7 @@ const RestaurantMenu = () => {
           social_media: data.social_media ? {
             facebook: (data.social_media as any).facebook || undefined,
             instagram: (data.social_media as any).instagram || undefined,
-            twitter: (data.social_media as any).twitter || undefined,
+            whatsapp: (data.social_media as any).whatsapp || undefined,
           } : {},
           created_at: data.created_at || '',
           updated_at: data.updated_at || '',
