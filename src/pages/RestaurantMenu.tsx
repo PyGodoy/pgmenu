@@ -14,39 +14,44 @@ const RestaurantMenu = () => {
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [headerHeight, setHeaderHeight] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   // Fetch restaurant data
   const { data: restaurant } = useQuery<Restaurant>({
     queryKey: ['restaurant', restaurantSlug],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('restaurants')
-        .select('*')
-        .eq('slug', restaurantSlug)
-        .single();
-      
-      if (error) throw error;
-      if (!data) throw new Error('Restaurant not found');
-
-      // Transformar os dados para corresponder ao tipo Restaurant
-      return {
-        id: data.id,
-        name: data.name,
-        description: data.description || '',
-        logo_url: data.logo_url || '',
-        address: data.address,
-        phone: data.phone,
-        email: data.email,
-        hours_of_operation: data.hours_of_operation,
-        social_media: data.social_media ? {
-          facebook: (data.social_media as any).facebook || undefined,
-          instagram: (data.social_media as any).instagram || undefined,
-          twitter: (data.social_media as any).twitter || undefined,
-        } : {},
-        created_at: data.created_at || '',
-        updated_at: data.updated_at || '',
-        customization: data.customization || {}, // Adicionar o campo customizations
-      };
+      setLoading(true); // Inicia o carregamento
+      try {
+        const { data, error } = await supabase
+          .from('restaurants')
+          .select('*')
+          .eq('slug', restaurantSlug)
+          .single();
+        
+        if (error) throw error;
+        if (!data) throw new Error('Restaurant not found');
+        
+        return {
+          id: data.id,
+          name: data.name,
+          description: data.description || '',
+          logo_url: data.logo_url || '',
+          address: data.address,
+          phone: data.phone,
+          email: data.email,
+          hours_of_operation: data.hours_of_operation,
+          social_media: data.social_media ? {
+            facebook: (data.social_media as any).facebook || undefined,
+            instagram: (data.social_media as any).instagram || undefined,
+            twitter: (data.social_media as any).twitter || undefined,
+          } : {},
+          created_at: data.created_at || '',
+          updated_at: data.updated_at || '',
+          customization: data.customization || {}, // Adicionar o campo customizations
+        };
+      } finally {
+        setLoading(false); // Finaliza o carregamento
+      }
     },
   });
 
@@ -74,6 +79,34 @@ const RestaurantMenu = () => {
       updateMetaTag('og:description', restaurant.description || 'Cardápio digital do restaurante');
       updateMetaTag('og:url', window.location.href);
       updateMetaTag('og:image', restaurant.logo_url || '/default-image.png');
+    }
+  }, [restaurant]);
+
+  useEffect(() => {
+    if (restaurant) {
+      // Atualizar o título da página
+      document.title = `${restaurant.name} - PG Menu`;
+
+      // Atualizar as meta tags do Open Graph
+      const metaTitle = document.querySelector('meta[property="og:title"]');
+      if (metaTitle) {
+        metaTitle.setAttribute('content', `${restaurant.name} - PG Menu`);
+      }
+
+      const metaDescription = document.querySelector('meta[property="og:description"]');
+      if (metaDescription) {
+        metaDescription.setAttribute('content', restaurant.description || 'Cardápio digital do restaurante');
+      }
+
+      const metaUrl = document.querySelector('meta[property="og:url"]');
+      if (metaUrl) {
+        metaUrl.setAttribute('content', window.location.href);
+      }
+
+      const metaImage = document.querySelector('meta[property="og:image"]');
+      if (metaImage && restaurant.logo_url) {
+        metaImage.setAttribute('content', restaurant.logo_url);
+      }
     }
   }, [restaurant]);
 
@@ -146,6 +179,14 @@ const RestaurantMenu = () => {
     return matchesSearch;
   });
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-lg animate-pulse">Carregando restaurante...</p>
+      </div>
+    );
+  }
+  
   if (!restaurant) {
     return (
       <div className="min-h-screen flex items-center justify-center">
