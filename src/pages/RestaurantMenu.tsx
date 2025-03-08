@@ -151,7 +151,7 @@ const RestaurantMenu = () => {
         .from('menu_items')
         .select('*')
         .eq('restaurant_id', restaurant.id)
-        .eq('active', true) // Filtra apenas os itens ativos
+        .eq('active', true)
         .order('order_itens');
       
       if (activeCategory) {
@@ -212,7 +212,10 @@ const RestaurantMenu = () => {
           />
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 md:gap-6 mt-4 sm:mt-6 md:mt-8">
             {filteredItems.map((item) => (
-              <MenuItem key={item.id} {...item} />
+              <MenuItem 
+                key={item.id} 
+                {...item} 
+              />
             ))}
           </div>
         </div>

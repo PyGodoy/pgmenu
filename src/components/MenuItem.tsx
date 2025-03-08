@@ -3,9 +3,12 @@ import { Card, CardContent } from "./ui/card";
 import type { MenuItem as MenuItemType } from "@/types";
 import clsx from "clsx";
 
-interface MenuItemProps extends Omit<MenuItemType, 'id' | 'category_id' | 'created_at' | 'updated_at' | 'dietary_info'> {}
+interface MenuItemProps extends Omit<MenuItemType, 'id' | 'category_id' | 'created_at' | 'updated_at' | 'dietary_info'> {
+  is_promotional?: boolean;
+  promotional_price?: number;
+}
 
-export const MenuItem = ({ name, description, price, image_url }: MenuItemProps) => {
+export const MenuItem = ({ name, description, price, image_url, is_promotional, promotional_price }: MenuItemProps) => {
   const [expanded, setExpanded] = useState(false); // Estado para controlar a expansão
 
   // Verifica se o item tem uma imagem
@@ -37,13 +40,18 @@ export const MenuItem = ({ name, description, price, image_url }: MenuItemProps)
           >
             {name}
           </h3>
+
           {/* Preço */}
-          <span 
-            className="font-medium whitespace-nowrap"
-            style={{ color: 'var(--secondary)' }} // Aplica a cor secundária
-          >
-            R${price.toFixed(2)}
-          </span>
+          <div className="font-medium whitespace-nowrap" style={{ color: 'var(--secondary)' }}>
+            {is_promotional && promotional_price ? (
+              <div className="flex items-center gap-2">
+                <span className="line-through text-sm text-gray-500">R${price.toFixed(2)}</span>
+                <span className="text-lg font-semibold">R${promotional_price.toFixed(2)}</span>
+              </div>
+            ) : (
+              <span className="text-lg font-semibold">R${price.toFixed(2)}</span>
+            )}
+          </div>
 
           {/* Descrição */}
           <p className="text-sm text-muted-foreground mt-2">

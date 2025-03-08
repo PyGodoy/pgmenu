@@ -32,9 +32,11 @@ const menuItemSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   description: z.string().min(1, "Descrição é obrigatória"),
   price: z.string().min(1, "Preço é obrigatório").transform((val) => parseFloat(val)),
+  promotional_price: z.string().optional().transform((val) => val ? parseFloat(val) : null), // Novo campo para preço promocional
+  is_promotional: z.boolean(), // Novo campo para indicar se o item está em promoção
   category_id: z.string().min(1, "Categoria é obrigatória").transform((val) => parseInt(val)),
   image: z.instanceof(File).optional(),
-  image_url: z.string().optional(), // Torna o campo image_url opcional
+  image_url: z.string().optional(),
   active: z.boolean(),
 });
 
@@ -66,10 +68,13 @@ export function MenuItemDialog({
     defaultValues: {
       name: menuItem?.name || "",
       description: menuItem?.description || "",
-      price: menuItem?.price?.toString() || "", // Fixed this line
+      price: menuItem?.price?.toString() || "",
       category_id: menuItem?.category_id?.toString() || "",
       image_url: menuItem?.image_url || "",
-      active: menuItem?.active || true, // Adicione esta linha
+      active: menuItem?.active || true,
+      // Adicione estas duas linhas:
+      is_promotional: menuItem?.is_promotional || false,
+      promotional_price: menuItem?.promotional_price?.toString() || ""
     },
   });
 
@@ -79,10 +84,13 @@ export function MenuItemDialog({
       form.reset({
         name: menuItem.name,
         description: menuItem.description,
-        price: menuItem.price?.toString() || "", // Garantir que o preço seja uma string
-        category_id: menuItem.category_id?.toString() || "", // Garantir que o category_id seja uma string
+        price: menuItem.price?.toString() || "",
+        category_id: menuItem.category_id?.toString() || "",
         image_url: menuItem.image_url || "",
-        active: menuItem.active, // Use o valor atual do item
+        active: menuItem.active,
+        is_promotional: menuItem.is_promotional || false,
+        // Aqui está o ajuste:
+        promotional_price: menuItem.promotional_price !== null ? menuItem.promotional_price.toString() : ""
       });
       // Atualiza a preview da imagem
       setPreviewUrl(menuItem.image_url || "");
@@ -94,7 +102,9 @@ export function MenuItemDialog({
         price: "",
         category_id: "",
         image_url: "",
-        active: true, // Adicione esta linha
+        active: true,
+        is_promotional: false,
+        promotional_price: "" // Aqui é uma string vazia
       });
       setPreviewUrl("");
     }
@@ -145,27 +155,29 @@ export function MenuItemDialog({
   
       // Obtenha o ID do restaurante associado ao usuário logado
       const { data: { user } } = await supabase.auth.getUser();
-      const { data: restaurant, error: restaurantError } = await supabase
-        .from('restaurants')
-        .select('id')
-        .eq('owner_id', user?.id)
-        .single();
-  
-      if (restaurantError || !restaurant) {
-        throw new Error('Restaurante não encontrado.');
-      }
-  
-      const menuItemData = {
-        name: data.name,
-        description: data.description,
-        price: data.price,
-        category_id: data.category_id,
-        image_url: data.image_url || null, // Permite que image_url seja null
-        restaurant_id: restaurant.id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        active: data.active,
-      };
+    const { data: restaurant, error: restaurantError } = await supabase
+      .from('restaurants')
+      .select('id')
+      .eq('owner_id', user?.id)
+      .single();
+
+    if (restaurantError || !restaurant) {
+      throw new Error('Restaurante não encontrado.');
+    }
+
+    const menuItemData = {
+      name: data.name,
+      description: data.description,
+      price: data.price,
+      promotional_price: data.is_promotional ? data.promotional_price : null, // Inclui o preço promocional
+      is_promotional: data.is_promotional, // Inclui o status da promoção
+      category_id: data.category_id,
+      image_url: data.image_url || null,
+      restaurant_id: restaurant.id,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      active: data.active,
+    };
   
       if (isEditing && menuItem) {
         const { error } = await supabase
@@ -174,6 +186,8 @@ export function MenuItemDialog({
             name: data.name,
             description: data.description,
             price: data.price,
+            promotional_price: data.is_promotional ? data.promotional_price : null, // Inclui o preço promocional
+            is_promotional: data.is_promotional, // Inclui o status da promoção
             category_id: data.category_id,
             image_url: data.image_url || null, // Permite que image_url seja null
             active: data.active,
@@ -225,15 +239,16 @@ export function MenuItemDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl" style={{ backgroundColor: 'var(--background)' }}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6" style={{ backgroundColor: 'var(--background)' }}>
         <DialogHeader>
           <DialogTitle style={{ color: 'var(--primary)' }}>
             {isEditing ? "Editar Item" : "Novo Item"}
           </DialogTitle>
         </DialogHeader>
-
+  
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Campo de Nome */}
             <FormField
               control={form.control}
               name="name"
@@ -241,9 +256,9 @@ export function MenuItemDialog({
                 <FormItem>
                   <FormLabel style={{ color: 'var(--text)' }}>Nome</FormLabel>
                   <FormControl>
-                    <Input 
-                      {...field} 
-                      placeholder="Nome do item" 
+                    <Input
+                      {...field}
+                      placeholder="Nome do item"
                       style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}
                     />
                   </FormControl>
@@ -251,7 +266,8 @@ export function MenuItemDialog({
                 </FormItem>
               )}
             />
-
+  
+            {/* Campo de Descrição */}
             <FormField
               control={form.control}
               name="description"
@@ -259,10 +275,10 @@ export function MenuItemDialog({
                 <FormItem>
                   <FormLabel style={{ color: 'var(--text)' }}>Descrição</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      {...field} 
+                    <Textarea
+                      {...field}
                       placeholder="Descreva o item"
-                      className="min-h-[100px]"
+                      className="min-h-[80px] sm:min-h-[100px]"
                       style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}
                     />
                   </FormControl>
@@ -270,8 +286,9 @@ export function MenuItemDialog({
                 </FormItem>
               )}
             />
-
-            <div className="grid grid-cols-2 gap-4">
+  
+            {/* Campos de Preço e Categoria */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="price"
@@ -279,13 +296,13 @@ export function MenuItemDialog({
                   <FormItem>
                     <FormLabel style={{ color: 'var(--text)' }}>Preço</FormLabel>
                     <FormControl>
-                      <Input 
-                        {...field} 
-                        type="number" 
+                      <Input
+                        {...field}
+                        type="number"
                         step="0.01"
                         min="0"
-                        placeholder="0.00" 
-                        onChange={(e) => field.onChange(e.target.value)} // Garantir que o valor seja uma string
+                        placeholder="0.00"
+                        onChange={(e) => field.onChange(e.target.value)}
                         style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}
                       />
                     </FormControl>
@@ -293,15 +310,15 @@ export function MenuItemDialog({
                   </FormItem>
                 )}
               />
-
+  
               <FormField
                 control={form.control}
                 name="category_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel style={{ color: 'var(--text)' }}>Categoria</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
+                    <Select
+                      onValueChange={field.onChange}
                       defaultValue={field.value ? field.value.toString() : ""}
                     >
                       <FormControl>
@@ -311,8 +328,8 @@ export function MenuItemDialog({
                       </FormControl>
                       <SelectContent style={{ backgroundColor: 'var(--background)', color: 'var(--text)' }}>
                         {categories.map((category) => (
-                          <SelectItem 
-                            key={category.id} 
+                          <SelectItem
+                            key={category.id}
                             value={category.id.toString()}
                             style={{ backgroundColor: 'var(--background)', color: 'var(--text)' }}
                           >
@@ -326,21 +343,49 @@ export function MenuItemDialog({
                 )}
               />
             </div>
-
+  
+            {/* Campo de Promoção e Preço Promocional */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {form.watch('is_promotional') && (
+                <FormField
+                  control={form.control}
+                  name="promotional_price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel style={{ color: 'var(--text)' }}>Preço Promocional</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          onChange={(e) => field.onChange(e.target.value)}
+                          style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
+  
+            {/* Campo de Promoção */}
             <FormField
               control={form.control}
-              name="active"
+              name="is_promotional"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4" style={{ borderColor: 'var(--secondary)' }}>
-                  <FormLabel style={{ color: 'var(--text)' }}>Ativo</FormLabel>
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-2 sm:p-4" style={{ borderColor: 'var(--secondary)' }}>
+                  <FormLabel style={{ color: 'var(--text)', marginBottom: 0 }}>Promoção</FormLabel>
                   <FormControl>
                     <Switch
                       checked={field.value}
                       onCheckedChange={field.onChange}
                       className={clsx(
-                        "data-[state=checked]:bg-green-400", // Verde mais suave
-                        "data-[state=unchecked]:bg-gray-300", // Cinza mais suave
-                        "transition-colors duration-200" // Transição suave
+                        "data-[state=checked]:bg-green-400",
+                        "data-[state=unchecked]:bg-gray-300",
+                        "transition-colors duration-200"
                       )}
                     />
                   </FormControl>
@@ -348,7 +393,31 @@ export function MenuItemDialog({
                 </FormItem>
               )}
             />
-
+  
+            {/* Campo de Ativo */}
+            <FormField
+              control={form.control}
+              name="active"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-2 sm:p-4" style={{ borderColor: 'var(--secondary)' }}>
+                  <FormLabel style={{ color: 'var(--text)' }}>Ativo</FormLabel>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className={clsx(
+                        "data-[state=checked]:bg-green-400",
+                        "data-[state=unchecked]:bg-gray-300",
+                        "transition-colors duration-200"
+                      )}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+  
+            {/* Campo de Imagem */}
             <FormField
               control={form.control}
               name="image"
@@ -394,8 +463,9 @@ export function MenuItemDialog({
                 </FormItem>
               )}
             />
-
-            <div className="flex justify-end space-x-2">
+  
+            {/* Botões de Ação */}
+            <div className="flex justify-end space-x-2 sm:space-x-4">
               <Button
                 type="button"
                 variant="outline"
@@ -404,8 +474,8 @@ export function MenuItemDialog({
               >
                 Cancelar
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={loading}
                 style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
               >

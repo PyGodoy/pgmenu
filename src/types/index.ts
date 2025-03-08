@@ -4,6 +4,8 @@ export interface MenuItem {
   name: string;
   description: string;
   price: number;
+  promotional_price?: number;
+  is_promotional?: boolean; 
   image_url: string;
   category_id: number;
   dietary_info?: string[];

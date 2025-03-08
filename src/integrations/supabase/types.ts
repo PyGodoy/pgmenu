@@ -129,6 +129,8 @@ export interface Database {
           restaurant_id: number | null
           active: boolean;
           order_itens: number | null
+          promotional_price?: number;
+          is_promotional?: boolean; 
         }
         Insert: {
           id?: number
