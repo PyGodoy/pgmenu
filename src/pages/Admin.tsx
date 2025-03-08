@@ -51,29 +51,47 @@ const Admin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [openCategory, setOpenCategory] = useState<string | undefined>(undefined);
+  const [restaurant, setRestaurant] = useState(null);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+    const fetchRestaurant = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+  
+      if (!userId) {
         navigate('/login');
         return;
       }
-
-      const { data: profile } = await supabase
+  
+      // Buscar o ID do restaurante associado ao usuário logado
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('is_admin')
-        .eq('id', session.user.id)
+        .select('restaurant_id')
+        .eq('id', userId)
         .single();
-
-      if (!profile?.is_admin) {
-        navigate('/login');
+  
+      if (profileError || !profile?.restaurant_id) {
+        console.error("Erro ao buscar o restaurante:", profileError);
         return;
       }
+  
+      // Buscar os dados do restaurante usando o ID correto
+      const { data: restaurantData, error: restaurantError } = await supabase
+        .from("restaurants")
+        .select("*")
+        .eq("id", profile.restaurant_id)
+        .single();
+  
+      if (restaurantError) {
+        console.error("Erro ao buscar os dados do restaurante:", restaurantError);
+        return;
+      }
+  
+      setRestaurant(restaurantData);
     };
-
-    checkAuth();
-  }, [navigate]);
+  
+    fetchRestaurant();
+  }, []);
 
   const toggleItemActive = async (item: MenuItem) => {
     try {
@@ -185,7 +203,8 @@ const Admin = () => {
     setCategoryDialogOpen(true);
   };
 
-  const handleDeleteCategory = async (category: Category) => {
+  const handleDeleteCategory = (category: Category) => {
+    setMenuItemToDelete(null);
     setCategoryToDelete(category);
     setDeleteDialogOpen(true);
   };
@@ -206,14 +225,21 @@ const Admin = () => {
       });
 
       fetchData();
-    } catch (error: any) {
       toast({
-        title: "Erro ao excluir categoria",
-        description: error.message,
+        title: "Categoria excluída",
+        description: "A categoria foi excluída com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao excluir categoria:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao excluir a categoria.",
         variant: "destructive",
       });
     } finally {
+      // Fecha o diálogo
       setDeleteDialogOpen(false);
+      // Limpa a categoria a ser excluída
       setCategoryToDelete(null);
     }
   };
@@ -223,8 +249,9 @@ const Admin = () => {
     setMenuItemDialogOpen(true);
   };
 
-  const handleDeleteMenuItem = async (menuItem: MenuItem) => {
-    setMenuItemToDelete(menuItem);
+  const handleDeleteMenuItem = (item: MenuItem) => {
+    setCategoryToDelete(null);
+    setMenuItemToDelete(item);
     setDeleteDialogOpen(true);
   };
 
@@ -244,14 +271,21 @@ const Admin = () => {
       });
 
       fetchData();
-    } catch (error: any) {
       toast({
-        title: "Erro ao excluir item",
-        description: error.message,
+        title: "Item excluído",
+        description: "O item do cardápio foi excluído com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao excluir item:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao excluir o item do cardápio.",
         variant: "destructive",
       });
     } finally {
+      // Fecha o diálogo
       setDeleteDialogOpen(false);
+      // Limpa o item a ser excluído
       setMenuItemToDelete(null);
     }
   };
@@ -390,7 +424,18 @@ const Admin = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-4 sm:py-8 px-4 sm:px-6 md:px-8">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-text text-center sm:text-left">Painel Administrativo</h1>
+          <div className="flex items-center gap-4">
+            {restaurant?.logo_url && (
+              <img
+                src={restaurant.logo_url}
+                alt="Logo do Restaurante"
+                className="w-12 h-12 object-contain rounded-md"
+              />
+            )}
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-text text-center sm:text-left">
+              Painel Administrativo
+            </h1>
+          </div>
           <Button
             variant="outline"
             onClick={handleLogout}
@@ -537,8 +582,8 @@ const Admin = () => {
                                           <TableCell className="py-2 hidden sm:table-cell">
                                             <span
                                               className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${item.active
-                                                  ? "bg-green-100 text-green-800"
-                                                  : "bg-gray-100 text-gray-800"
+                                                ? "bg-green-100 text-green-800"
+                                                : "bg-gray-100 text-gray-800"
                                                 }`}
                                             >
                                               {item.active ? "Ativo" : "Desativado"}
@@ -614,7 +659,7 @@ const Admin = () => {
           <AlertDialogContent className="bg-white max-w-md mx-auto border-2 border-gray-300 shadow-xl rounded-lg">
             <AlertDialogHeader className="pb-3">
               <AlertDialogTitle className="text-red-600 text-xl font-bold flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="mr-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
                   <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
                   <line x1="12" y1="9" x2="12" y2="13"></line>
                   <line x1="12" y1="17" x2="12.01" y2="17"></line>
@@ -622,7 +667,7 @@ const Admin = () => {
                 Confirmar exclusão
               </AlertDialogTitle>
               <AlertDialogDescription className="text-gray-800 mt-3 text-base">
-                {categoryToDelete
+                {categoryToDelete !== null
                   ? "Tem certeza que deseja excluir esta categoria? Esta ação removerá todos os itens associados."
                   : "Tem certeza que deseja excluir este item do cardápio?"}
                 <p className="mt-2 font-medium text-red-600 text-base">Esta ação não pode ser desfeita.</p>
@@ -635,10 +680,10 @@ const Admin = () => {
                 Cancelar
               </AlertDialogCancel>
               <AlertDialogAction
-                onClick={categoryToDelete ? confirmDeleteCategory : confirmDeleteMenuItem}
+                onClick={categoryToDelete !== null ? confirmDeleteCategory : confirmDeleteMenuItem}
                 className="bg-red-600 text-white hover:bg-red-700 transition-colors w-full sm:w-auto rounded-md flex items-center justify-center font-medium text-base"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="mr-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
                   <path d="M3 6h18"></path>
                   <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
                   <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
@@ -648,7 +693,6 @@ const Admin = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
         {/* QR Code Button - Updated with text-primary */}
         <Button
           onClick={() => setShowQRCode(!showQRCode)}
