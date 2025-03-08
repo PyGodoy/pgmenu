@@ -386,43 +386,48 @@ const Admin = () => {
     }
   };
   
-  
-
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
-      <div className="container mx-auto py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold" style={{ color: 'var(--text)' }}>Painel Administrativo</h1>
-          <Button variant="outline" onClick={handleLogout} style={{ backgroundColor: 'var(--background)', color: 'var(--text)'}}>
-            Sair
-          </Button>
-        </div>
+  <div className="min-h-screen bg-background">
+    <div className="container mx-auto py-4 sm:py-8 px-4 sm:px-6 md:px-8">
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-text text-center sm:text-left">Painel Administrativo</h1>
+        <Button
+          variant="outline"
+          onClick={handleLogout}
+          className="mt-3 sm:mt-0 w-full sm:w-auto"
+          style={{ backgroundColor: 'var(--background)', color: 'var(--text)' }}
+        >
+          Sair
+        </Button>
+      </div>
 
-        <div className="grid gap-8">
-          {/* Categories Section */}
-          <Card style={{ backgroundColor: 'var(--background)'}}>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <h2 className="text-2xl font-semibold" style={{ color: 'var(--text)' }}>Categorias</h2>
-              <Button 
-                onClick={() => {
-                  setSelectedCategory(undefined);
-                  setCategoryDialogOpen(true);
-                }}
-                style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
-              >
-                Adicionar Categoria
-              </Button>
-            </CardHeader>
-            <CardContent>
+      <div className="grid gap-6 sm:gap-8">
+        {/* Categories Section */}
+        <Card className="bg-background shadow-sm">
+          <CardHeader className="flex flex-col sm:flex-row items-center justify-between pb-3 sm:pb-4">
+            <h2 className="text-xl sm:text-2xl font-semibold text-text mb-3 sm:mb-0">Categorias</h2>
+            <Button
+              onClick={() => {
+                setSelectedCategory(undefined);
+                setCategoryDialogOpen(true);
+              }}
+              className="w-full sm:w-auto"
+              style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
+            >
+              Adicionar Categoria
+            </Button>
+          </CardHeader>
+          <CardContent className="px-2 sm:px-6">
+            <div className="overflow-x-auto -mx-2 sm:mx-0">
               <DragDropContext onDragEnd={onDragEndCategories}>
                 <Droppable droppableId="categories">
                   {(provided) => (
-                    <Table ref={provided.innerRef} {...provided.droppableProps}>
+                    <Table ref={provided.innerRef} {...provided.droppableProps} className="w-full">
                       <TableHeader>
                         <TableRow>
-                          <TableHead style={{ color: 'var(--text)' }}>Nome</TableHead>
-                          <TableHead style={{ color: 'var(--text)' }}>Slug</TableHead>
-                          <TableHead style={{ color: 'var(--text)' }}>Ações</TableHead>
+                          <TableHead className="text-text text-sm">Nome</TableHead>
+                          <TableHead className="text-text text-sm hidden sm:table-cell">Slug</TableHead>
+                          <TableHead className="text-text text-sm">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -433,28 +438,31 @@ const Admin = () => {
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
-                                style={{ backgroundColor: 'var(--background)', color: 'var(--text)' }}
+                                className="bg-background text-text"
                               >
-                                <TableCell>{category.name}</TableCell>
-                                <TableCell>{category.slug}</TableCell>
-                                <TableCell>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="mr-2"
-                                    onClick={() => handleEditCategory(category)}
-                                    style={{ backgroundColor: 'var(--background)', color: 'var(--text)'}}
-                                  >
-                                    Editar
-                                  </Button>
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() => handleDeleteCategory(category)}
-                                    style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
-                                  >
-                                    Excluir
-                                  </Button>
+                                <TableCell className="py-2 text-sm sm:text-base">{category.name}</TableCell>
+                                <TableCell className="py-2 text-sm hidden sm:table-cell">{category.slug}</TableCell>
+                                <TableCell className="py-2">
+                                  <div className="flex flex-col sm:flex-row gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-full sm:w-auto text-xs"
+                                      onClick={() => handleEditCategory(category)}
+                                      style={{ backgroundColor: 'var(--background)', color: 'var(--text)' }}
+                                    >
+                                      Editar
+                                    </Button>
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      className="w-full sm:w-auto text-xs"
+                                      onClick={() => handleDeleteCategory(category)}
+                                      style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
+                                    >
+                                      Excluir
+                                    </Button>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             )}
@@ -466,51 +474,47 @@ const Admin = () => {
                   )}
                 </Droppable>
               </DragDropContext>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Menu Items Section */}
-          <Card style={{ backgroundColor: 'var(--background)'}}>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <h2 className="text-2xl font-semibold" style={{ color: 'var(--text)' }}>Itens do Cardápio</h2>
-              <Button 
-                onClick={() => {
-                  setSelectedMenuItem(undefined);
-                  setMenuItemDialogOpen(true);
-                }}
-                style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
-              >
-                Adicionar Item
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <Accordion 
-                type="single" 
-                collapsible
-                value={openCategory}
-                onValueChange={setOpenCategory}
-              >
-                {groupedMenuItems.map((category) => (
-                  <AccordionItem key={category.id} value={category.id.toString()}>
-                    <AccordionTrigger>
-                      <div className="flex items-center justify-between w-full">
-                        <span style={{ color: 'var(--text)' }}>{category.name}</span>
-                        <span className="text-sm" style={{ color: 'var(--text)' }}>
-                          {category.items.length} itens
-                        </span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
+        {/* Menu Items Section */}
+        <Card className="bg-background shadow-sm">
+          <CardHeader className="flex flex-col sm:flex-row items-center justify-between pb-3 sm:pb-4">
+            <h2 className="text-xl sm:text-2xl font-semibold text-text mb-3 sm:mb-0">Itens do Cardápio</h2>
+            <Button
+              onClick={() => {
+                setSelectedMenuItem(undefined);
+                setMenuItemDialogOpen(true);
+              }}
+              className="w-full sm:w-auto"
+              style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
+            >
+              Adicionar Item
+            </Button>
+          </CardHeader>
+          <CardContent className="px-2 sm:px-6">
+            <Accordion type="single" collapsible value={openCategory} onValueChange={setOpenCategory} className="w-full">
+              {groupedMenuItems.map((category) => (
+                <AccordionItem key={category.id} value={category.id.toString()}>
+                  <AccordionTrigger className="px-2">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-1 sm:gap-0">
+                      <span className="text-text font-medium">{category.name}</span>
+                      <span className="text-xs sm:text-sm text-text opacity-80">{category.items.length} itens</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="overflow-x-auto -mx-2 sm:mx-0">
                       <DragDropContext onDragEnd={onDragEndItems}>
                         <Droppable droppableId={category.id.toString()}>
                           {(provided) => (
-                            <Table ref={provided.innerRef} {...provided.droppableProps}>
+                            <Table ref={provided.innerRef} {...provided.droppableProps} className="w-full">
                               <TableHeader>
                                 <TableRow>
-                                  <TableHead style={{ color: 'var(--text)' }}>Nome</TableHead>
-                                  <TableHead style={{ color: 'var(--text)' }}>Preço</TableHead>
-                                  <TableHead style={{ color: 'var(--text)' }}>Status</TableHead>
-                                  <TableHead style={{ color: 'var(--text)' }}>Ações</TableHead>
+                                  <TableHead className="text-text text-sm">Nome</TableHead>
+                                  <TableHead className="text-text text-sm">Preço</TableHead>
+                                  <TableHead className="text-text text-sm hidden sm:table-cell">Status</TableHead>
+                                  <TableHead className="text-text text-sm">Ações</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -521,19 +525,18 @@ const Admin = () => {
                                         ref={provided.innerRef}
                                         {...provided.draggableProps}
                                         {...provided.dragHandleProps}
-                                        className={!item.active ? "opacity-60" : ""}
-                                        style={{ backgroundColor: 'var(--background)', color: 'var(--text)' }}
+                                        className={!item.active ? "opacity-60 bg-background text-text" : "bg-background text-text"}
                                       >
-                                        <TableCell>{item.name}</TableCell>
-                                        <TableCell>
+                                        <TableCell className="py-2 text-sm sm:text-base">{item.name}</TableCell>
+                                        <TableCell className="py-2 text-sm whitespace-nowrap">
                                           {new Intl.NumberFormat("pt-BR", {
                                             style: "currency",
                                             currency: "BRL",
                                           }).format(item.price)}
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className="py-2 hidden sm:table-cell">
                                           <span
-                                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                                               item.active
                                                 ? "bg-green-100 text-green-800"
                                                 : "bg-gray-100 text-gray-800"
@@ -542,33 +545,36 @@ const Admin = () => {
                                             {item.active ? "Ativo" : "Desativado"}
                                           </span>
                                         </TableCell>
-                                        <TableCell>
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="mr-2"
-                                            onClick={() => handleEditMenuItem(item)}
-                                            style={{ backgroundColor: 'var(--background)', color: 'var(--text)'}}
-                                          >
-                                            Editar
-                                          </Button>
-                                          <Button
-                                            variant={item.active ? "secondary" : "default"}
-                                            size="sm"
-                                            className="mr-2"
-                                            onClick={() => toggleItemActive(item)}
-                                            style={{ backgroundColor: item.active ? 'var(--primary)' : 'var(--background)', color: item.active ? 'var(--background)' : 'var(--text)' }}
-                                          >
-                                            {item.active ? "Desativar" : "Ativar"}
-                                          </Button>
-                                          <Button
-                                            variant="destructive"
-                                            size="sm"
-                                            onClick={() => handleDeleteMenuItem(item)}
-                                            style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
-                                          >
-                                            Excluir
-                                          </Button>
+                                        <TableCell className="py-2">
+                                          <div className="flex flex-col sm:flex-row gap-2">
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className="w-full sm:w-auto text-xs"
+                                              onClick={() => handleEditMenuItem(item)}
+                                              style={{ backgroundColor: 'var(--background)', color: 'var(--text)' }}
+                                            >
+                                              Editar
+                                            </Button>
+                                            <Button
+                                              variant={item.active ? "secondary" : "default"}
+                                              size="sm"
+                                              className="w-full sm:w-auto text-xs"
+                                              onClick={() => toggleItemActive(item)}
+                                              style={{ backgroundColor: item.active ? 'var(--primary)' : 'var(--background)', color: item.active ? 'var(--background)' : 'var(--text)' }}
+                                            >
+                                              {item.active ? "Desativar" : "Ativar"}
+                                            </Button>
+                                            <Button
+                                              variant="destructive"
+                                              size="sm"
+                                              className="w-full sm:w-auto text-xs"
+                                              onClick={() => handleDeleteMenuItem(item)}
+                                              style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
+                                            >
+                                              Excluir
+                                            </Button>
+                                          </div>
                                         </TableCell>
                                       </TableRow>
                                     )}
@@ -580,78 +586,79 @@ const Admin = () => {
                           )}
                         </Droppable>
                       </DragDropContext>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </CardContent>
-          </Card>
-        </div>
-
-        <CategoryDialog
-          open={categoryDialogOpen}
-          onOpenChange={setCategoryDialogOpen}
-          category={selectedCategory}
-          onSuccess={fetchData}
-        />
-
-        <MenuItemDialog
-          open={menuItemDialogOpen}
-          onOpenChange={setMenuItemDialogOpen}
-          menuItem={selectedMenuItem}
-          categories={categories}
-          onSuccess={fetchData}
-        />
-
-        <AlertDialog
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-        >
-          <AlertDialogContent style={{ backgroundColor: 'var(--background)' }}>
-            <AlertDialogHeader>
-              <AlertDialogTitle style={{ color: 'var(--primary)' }}>Confirmar exclusão</AlertDialogTitle>
-              <AlertDialogDescription style={{ color: 'var(--text)' }}>
-                {categoryToDelete
-                  ? "Tem certeza que deseja excluir esta categoria?"
-                  : "Tem certeza que deseja excluir este item?"}
-                Esta ação não pode ser desfeita.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel style={{ backgroundColor: 'var(--background)', color: 'var(--text)', borderColor: 'var(--secondary)' }}>
-                Cancelar
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={categoryToDelete ? confirmDeleteCategory : confirmDeleteMenuItem}
-                style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
-              >
-                Confirmar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        <Button 
-          onClick={() => setShowQRCode(!showQRCode)} 
-          style={{ backgroundColor: 'var(--primary)', color: 'var(--background)', marginTop: '20px' }}
-        >
-          {showQRCode ? "Ocultar QR Code" : "Mostrar QR Code"}
-        </Button>
-
-        <AnimatePresence>
-          {showQRCode && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <QRCodeGenerator />
-            </motion.div>
-          )}
-        </AnimatePresence>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Dialogs */}
+      <CategoryDialog
+        open={categoryDialogOpen}
+        onOpenChange={setCategoryDialogOpen}
+        category={selectedCategory}
+        onSuccess={fetchData}
+      />
+      <MenuItemDialog
+        open={menuItemDialogOpen}
+        onOpenChange={setMenuItemDialogOpen}
+        menuItem={selectedMenuItem}
+        categories={categories}
+        onSuccess={fetchData}
+      />
+
+      {/* Alert Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="bg-background max-w-xs sm:max-w-md mx-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-primary">Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription className="text-text">
+              {categoryToDelete
+                ? "Tem certeza que deseja excluir esta categoria?"
+                : "Tem certeza que deseja excluir este item?"}
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <AlertDialogCancel className="bg-background text-text border-secondary w-full sm:w-auto">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={categoryToDelete ? confirmDeleteCategory : confirmDeleteMenuItem}
+              className="bg-primary text-background w-full sm:w-auto"
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* QR Code Button - Updated with text-primary */}
+      <Button
+        onClick={() => setShowQRCode(!showQRCode)}
+        className="mt-6 w-full sm:w-auto bg-primary text-primary"
+        style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
+      >
+        {showQRCode ? "Ocultar QR Code" : "Mostrar QR Code"}
+      </Button>
+
+      <AnimatePresence>
+        {showQRCode && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.3 }}
+            className="mt-4 flex justify-center"
+          >
+            <QRCodeGenerator />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
-  );
-};
+  </div>
+);
+}
 
 export default Admin;
