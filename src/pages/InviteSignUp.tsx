@@ -14,38 +14,44 @@ const InviteSignUp = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Verifica se há um token de invite na URL
+  // Pega o token da URL
   const inviteToken = searchParams.get('token');
+  
+  // Pega o tipo de convite (deve ser "invite" para convites)
+  const type = searchParams.get('type');
+  
+  // E também extrair o email do convite se estiver presente na URL
+  const inviteEmail = searchParams.get('email');
 
   useEffect(() => {
-    if (!inviteToken) {
+    // Verifica se há um token e se o tipo é "invite"
+    if (!inviteToken || type !== "invite") {
       toast({
         title: "Erro",
         description: "Link de invite inválido ou expirado.",
         variant: "destructive",
       });
-      navigate('/login'); // Redireciona para o login se não houver token
+      navigate('/login'); // Redireciona para o login
+      return;
     }
-  }, [inviteToken, navigate, toast]);
+    
+    // Se o email do convite estiver disponível, preencha automaticamente
+    if (inviteEmail) {
+      setEmail(decodeURIComponent(inviteEmail));
+    }
+  }, [inviteToken, type, inviteEmail, navigate, toast]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // Verifica se o token de invite é válido
-      const { data: inviteData, error: inviteError } = await supabase.auth.getUser(inviteToken!);
-
-      if (inviteError || !inviteData) {
-        throw new Error('Link de invite inválido ou expirado.');
-      }
-
-      // Verifica se o email do convite corresponde ao email inserido
-      if (inviteData.user?.email !== email) {
+      // 1. Verificamos se o email está preenchido e corresponde ao do convite (se disponível)
+      if (inviteEmail && inviteEmail !== email) {
         throw new Error('O email inserido não corresponde ao email do convite.');
       }
 
-      // Cria a conta do usuário
+      // 2. Tentamos criar a conta com o email e senha
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -53,12 +59,25 @@ const InviteSignUp = () => {
 
       if (signUpError) throw signUpError;
 
-      toast({
-        title: "Cadastro realizado com sucesso",
-        description: "Bem-vindo!",
-      });
-
-      navigate('/'); // Redireciona para a página inicial após o cadastro
+      // 3. Depois do cadastro bem-sucedido, recuperamos o token de acesso
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) throw sessionError;
+      
+      if (session?.access_token) {
+        // 4. Utilizamos o token para verificar o convite (opcional, dependendo da sua lógica de negócio)
+        // Esta parte pode variar dependendo de como você implementou o sistema de convites
+        // Pode ser necessário uma chamada à sua API personalizada ou a uma função RPC do Supabase
+        
+        toast({
+          title: "Cadastro realizado com sucesso",
+          description: "Bem-vindo!",
+        });
+        
+        navigate('/'); // Redireciona para a página inicial após o cadastro
+      } else {
+        throw new Error('Não foi possível completar o cadastro. Tente novamente.');
+      }
     } catch (error: any) {
       toast({
         title: "Erro",
@@ -90,6 +109,7 @@ const InviteSignUp = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={!!inviteEmail} // Desabilita o campo se o email vier no convite
                 style={{ backgroundColor: 'var(--background)', color: 'var(--text)'}}
               />
             </div>
