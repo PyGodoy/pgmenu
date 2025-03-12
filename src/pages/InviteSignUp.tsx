@@ -31,32 +31,104 @@ const InviteSignUp = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!inviteToken) {
+      toast({
+        title: "Erro",
+        description: "Token de convite não encontrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setLoading(true);
 
     try {
-      // No fluxo de convite do Supabase, usamos updateUser com o token
-      const { data, error } = await supabase.auth.updateUser({
-        password: password,
-        data: { email_confirmed: true }
-      }, {
-        emailRedirectTo: window.location.origin
+      // Usando o método específico para convites do Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: inviteToken, // Usa o token como a senha temporária
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          // Se o token não é uma senha válida, pode ser apenas um token de convite
+          // Tente definir a senha usando o token
+          const { data: userData, error: updateError } = await supabase.auth.updateUser({
+            password: password
+          });
 
-      // Se o cadastro for bem-sucedido
+          if (updateError) {
+            throw updateError;
+          }
+
+          toast({
+            title: "Cadastro realizado com sucesso",
+            description: "Bem-vindo!",
+          });
+
+          navigate('/');
+          return;
+        }
+        
+        throw error;
+      }
+
+      // Se conseguiu fazer login com o token, agora atualize a senha
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: password
+      });
+
+      if (updateError) throw updateError;
+
       toast({
         title: "Cadastro realizado com sucesso",
         description: "Bem-vindo!",
       });
 
-      // Redireciona para a página inicial
       navigate('/');
     } catch (error: any) {
       console.error("Erro ao processar convite:", error);
+      
+      // Tente uma abordagem alternativa: usar o token diretamente
+      try {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin
+        });
+        
+        if (!resetError) {
+          // Use updateUser com o token
+          const { error: tokenError } = await supabase.auth.verifyOtp({
+            email,
+            token: inviteToken,
+            type: 'recovery'
+          });
+          
+          if (!tokenError) {
+            // Defina a senha
+            const { error: pwError } = await supabase.auth.updateUser({
+              password: password
+            });
+            
+            if (!pwError) {
+              toast({
+                title: "Cadastro realizado com sucesso",
+                description: "Bem-vindo!",
+              });
+              
+              navigate('/');
+              return;
+            }
+          }
+        }
+      } catch (altError) {
+        console.error("Erro na abordagem alternativa:", altError);
+      }
+      
+      // Se chegou aqui, todas as tentativas falharam
       toast({
         title: "Erro",
-        description: error.message || "Ocorreu um erro ao processar o convite.",
+        description: error.message || "Ocorreu um erro ao processar o convite. Tente novamente ou entre em contato com o suporte.",
         variant: "destructive",
       });
     } finally {
