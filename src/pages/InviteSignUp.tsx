@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -10,16 +10,15 @@ const InviteSignUp = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [searchParams] = useSearchParams(); // Para capturar o token da URL
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Verifica se há um token no hash da URL
-    const hash = window.location.hash.substring(1); // Remove o #
-    const urlParams = new URLSearchParams(hash); // Converte o hash em URLSearchParams
-    const refreshToken = urlParams.get('refresh_token');
+  // Captura o token da URL
+  const inviteToken = searchParams.get('token');
 
-    if (!refreshToken) {
+  useEffect(() => {
+    if (!inviteToken) {
       toast({
         title: "Erro",
         description: "Token de convite inválido ou ausente",
@@ -27,7 +26,7 @@ const InviteSignUp = () => {
       });
       navigate('/login'); // Redireciona para o login se não houver token
     }
-  }, [navigate, toast]);
+  }, [inviteToken, navigate, toast]);
 
   const handleSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,28 +52,20 @@ const InviteSignUp = () => {
     setLoading(true);
 
     try {
-      // Passo 1: Extrai o refresh_token do hash da URL
-      const hash = window.location.hash.substring(1); // Remove o #
-      const urlParams = new URLSearchParams(hash); // Converte o hash em URLSearchParams
-      const refreshToken = urlParams.get('refresh_token');
-
-      if (!refreshToken) {
-        throw new Error("Token de convite inválido ou ausente");
-      }
-
-      // Passo 2: Renova a sessão usando o refresh_token
-      const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession({
-        refresh_token: refreshToken,
+      // Passo 1: Validar o token de convite
+      const { error: inviteError } = await supabase.auth.verifyOtp({
+        token_hash: inviteToken!,
+        type: 'invite', // Tipo de OTP (invite)
       });
 
-      if (sessionError) throw sessionError;
+      if (inviteError) throw inviteError;
 
-      // Passo 3: Define a nova senha do usuário
-      const { data: userData, error: userError } = await supabase.auth.updateUser({
+      // Passo 2: Definir a senha do usuário
+      const { error: updateError } = await supabase.auth.updateUser({
         password: password,
       });
 
-      if (userError) throw userError;
+      if (updateError) throw updateError;
 
       toast({
         title: "Senha definida com sucesso",
