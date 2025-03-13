@@ -9,7 +9,6 @@ import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
 import RestaurantMenu from "./pages/RestaurantMenu";
 import ResetPassword from "./pages/ResetPassword";
-import InviteSignUp from "./pages/InviteSignUp";
 
 const queryClient = new QueryClient();
 
@@ -23,7 +22,6 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/invite-signup" element={<InviteSignUp />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/:restaurantSlug" element={<RestaurantMenu />} />
           <Route path="*" element={<NotFound />} />
