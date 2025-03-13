@@ -52,12 +52,20 @@ const InviteSignUp = () => {
     setLoading(true);
 
     try {
-      // Verifica o token do convite e define a senha do usuário
-      const { error } = await supabase.auth.updateUser({
+      // Passo 1: Trocar o token do convite por uma sessão de autenticação
+      const { error: inviteError } = await supabase.auth.verifyOtp({
+        token_hash: inviteToken!,
+        type: 'invite', // Tipo de OTP (invite)
+      });
+
+      if (inviteError) throw inviteError;
+
+      // Passo 2: Definir a senha do usuário
+      const { error: updateError } = await supabase.auth.updateUser({
         password: password,
       });
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
       toast({
         title: "Senha definida com sucesso",
