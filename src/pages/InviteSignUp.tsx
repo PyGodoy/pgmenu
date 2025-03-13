@@ -10,7 +10,8 @@ const InviteSignUp = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [searchParams] = useSearchParams(); // Para capturar o token da URL
+  const [email, setEmail] = useState(''); // Add email state
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -54,7 +55,8 @@ const InviteSignUp = () => {
     try {
       // Passo 1: Validar o token de convite
       const { error: inviteError } = await supabase.auth.verifyOtp({
-        token_hash: inviteToken!,
+        email: email, // You need the user's email to verify the token
+        token: inviteToken!, // Use the plain token
         type: 'invite', // Tipo de OTP (invite)
       });
 
@@ -77,7 +79,7 @@ const InviteSignUp = () => {
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.message,
+        description: error.message || "O link de convite é inválido ou expirou.",
         variant: "destructive",
       });
     } finally {
@@ -98,6 +100,19 @@ const InviteSignUp = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSetPassword} className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium" style={{ color: 'var(--text)' }}>
+                Email
+              </label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                style={{ backgroundColor: 'var(--background)', color: 'var(--text)'}}
+              />
+            </div>
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium" style={{ color: 'var(--text)' }}>
                 Nova Senha
