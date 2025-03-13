@@ -1,36 +1,30 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { supabase } from '@/lib/supabase';
 import { useToast } from "@/components/ui/use-toast";
 
-const InviteSignUp = () => {
+const ResetPassword = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [searchParams] = useSearchParams(); // Para capturar o token do convite da URL
+  const [hash, setHash] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Captura o token do convite da URL
-  const inviteToken = searchParams.get('token');
-
   useEffect(() => {
-    if (!inviteToken) {
-      toast({
-        title: "Erro",
-        description: "Token de convite inválido ou ausente",
-        variant: "destructive",
-      });
-      navigate('/login'); // Redireciona para o login se não houver token
+    // Captura o hash da URL quando o componente monta
+    const hashFragment = window.location.hash;
+    if (hashFragment) {
+      setHash(hashFragment);
     }
-  }, [inviteToken, navigate, toast]);
+  }, []);
 
-  const handleSetPassword = async (e: React.FormEvent) => {
+  const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (password !== confirmPassword) {
       toast({
         title: "Erro",
@@ -52,27 +46,18 @@ const InviteSignUp = () => {
     setLoading(true);
 
     try {
-      // Passo 1: Trocar o token do convite por uma sessão de autenticação
-      const { error: inviteError } = await supabase.auth.verifyOtp({
-        token_hash: inviteToken!,
-        type: 'invite', // Tipo de OTP (invite)
+      const { error } = await supabase.auth.updateUser({
+        password: password
       });
 
-      if (inviteError) throw inviteError;
-
-      // Passo 2: Definir a senha do usuário
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: password,
-      });
-
-      if (updateError) throw updateError;
+      if (error) throw error;
 
       toast({
-        title: "Senha definida com sucesso",
+        title: "Senha redefinida com sucesso",
         description: "Agora você pode fazer login com sua nova senha",
       });
 
-      // Redireciona para a página de login após definir a senha
+      // Redireciona para a página de login após redefinir a senha.
       navigate('/login');
     } catch (error: any) {
       toast({
@@ -90,14 +75,14 @@ const InviteSignUp = () => {
       <Card className="w-full max-w-md" style={{ backgroundColor: 'var(--background)'}}>
         <CardHeader>
           <h1 className="font-display text-2xl font-bold text-center" style={{ color: 'var(--text)' }}>
-            Finalizar Cadastro
+            Redefinir Senha
           </h1>
           <p className="text-center" style={{ color: 'var(--text)' }}>
-            Defina sua senha para concluir o cadastro
+            Digite sua nova senha abaixo
           </p>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSetPassword} className="space-y-4">
+          <form onSubmit={handlePasswordReset} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium" style={{ color: 'var(--text)' }}>
                 Nova Senha
@@ -130,7 +115,7 @@ const InviteSignUp = () => {
               disabled={loading}
               style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
             >
-              {loading ? "Finalizando cadastro..." : "Finalizar Cadastro"}
+              {loading ? "Atualizando..." : "Redefinir Senha"}
             </Button>
           </form>
         </CardContent>
@@ -139,4 +124,4 @@ const InviteSignUp = () => {
   );
 };
 
-export default InviteSignUp;
+export default ResetPassword;
