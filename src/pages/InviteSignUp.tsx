@@ -15,7 +15,8 @@ const InviteSignUp = () => {
 
   useEffect(() => {
     // Verifica se há um token no hash da URL
-    const urlParams = new URLSearchParams(window.location.hash.substring(1)); // Remove o #
+    const hash = window.location.hash.substring(1); // Remove o #
+    const urlParams = new URLSearchParams(hash); // Converte o hash em URLSearchParams
     const refreshToken = urlParams.get('refresh_token');
 
     if (!refreshToken) {
@@ -53,7 +54,8 @@ const InviteSignUp = () => {
 
     try {
       // Passo 1: Extrai o refresh_token do hash da URL
-      const urlParams = new URLSearchParams(window.location.hash.substring(1)); // Remove o #
+      const hash = window.location.hash.substring(1); // Remove o #
+      const urlParams = new URLSearchParams(hash); // Converte o hash em URLSearchParams
       const refreshToken = urlParams.get('refresh_token');
 
       if (!refreshToken) {
