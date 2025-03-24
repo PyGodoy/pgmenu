@@ -206,6 +206,80 @@ export interface Database {
           }
         ]
       }
+      tables: {
+        Row: {
+          id: string;
+          table_number: number;
+          token: string;
+          restaurant_id: number;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          table_number: number;
+          token: string;
+          restaurant_id: number;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          table_number?: number;
+          token?: string;
+          restaurant_id?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tables_restaurant_id_fkey";
+            columns: ["restaurant_id"];
+            isOneToOne: false;
+            referencedRelation: "restaurants";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      orders: {
+        Row: {
+          id: number;
+          table_token: string;
+          items: Json;
+          status: string;
+          restaurant_id: number;
+          customer_name: string;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: number;
+          table_token: string;
+          items: Json;
+          status: string;
+          restaurant_id: number;
+          customer_name: string;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: number;
+          table_token?: string;
+          items?: Json;
+          status?: string;
+          restaurant_id?: number;
+          customer_name: string;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "orders_restaurant_id_fkey";
+            columns: ["restaurant_id"];
+            isOneToOne: false;
+            referencedRelation: "restaurants";
+            referencedColumns: ["id"];
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -220,6 +294,7 @@ export interface Database {
       [_ in never]: never
     }
   }
+
 }
 
 export type Tables<

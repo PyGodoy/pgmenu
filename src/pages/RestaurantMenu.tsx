@@ -8,19 +8,27 @@ import { Footer } from "@/components/Footer";
 import { BackToTop } from "@/components/BackToTop";
 import { supabase } from "@/integrations/supabase/client";
 import type { Category, MenuItem as MenuItemType, Restaurant } from "@/types";
+import { QrCodeIcon, TruckIcon } from "lucide-react";
+import { TableOrder } from "@/components/TableOrder";
+import { CartModal } from "@/components/CartModal"; // Importe o novo componente
 
 const RestaurantMenu = () => {
-  const { restaurantSlug } = useParams();
+  const { restaurantSlug, tableToken } = useParams();
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [headerHeight, setHeaderHeight] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isTableOrderActive, setIsTableOrderActive] = useState(false);
+  const [cart, setCart] = useState<MenuItemType[]>([]);
+  const [showTableOrderModal, setShowTableOrderModal] = useState(false);
+  const [showCartModal, setShowCartModal] = useState(false); // Estado para controlar o modal do carrinho
+  const [customerName, setCustomerName] = useState("");
 
   // Fetch restaurant data
   const { data: restaurant } = useQuery<Restaurant>({
     queryKey: ['restaurant', restaurantSlug],
     queryFn: async () => {
-      setLoading(true); // Inicia o carregamento
+      setLoading(true);
       try {
         const { data, error } = await supabase
           .from('restaurants')
@@ -47,74 +55,45 @@ const RestaurantMenu = () => {
           } : {},
           created_at: data.created_at || '',
           updated_at: data.updated_at || '',
-          customization: data.customization || {}, // Adicionar o campo customizations
+          customization: data.customization || {},
         };
       } finally {
-        setLoading(false); // Finaliza o carregamento
+        setLoading(false);
       }
     },
   });
 
+  const verifyTableToken = async (token: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('tables')
+        .select('*')
+        .eq('token', token)
+        .single();
+
+      if (error) throw error;
+
+      if (!data) {
+        console.error("Mesa não encontrada");
+        // Redirecionar ou mostrar erro
+      }
+    } catch (error) {
+      console.error("Erro ao verificar token da mesa:", error);
+    }
+  };
+
+    // Verificar se o token da mesa é válido
+    useEffect(() => {
+      if (tableToken) {
+        verifyTableToken(tableToken);
+      }
+    }, [tableToken]);
+
   // Aplicar as personalizações dinamicamente
-
-  // Atualizar as meta tags quando o restaurante for carregado
-  useEffect(() => {
-    if (restaurant) {
-      // Atualizar o título da página
-      document.title = `${restaurant.name} - PG Menu`;
-  
-      // Função para atualizar uma meta tag
-      const updateMetaTag = (property: string, content: string) => {
-        let metaTag = document.querySelector(`meta[property="${property}"]`);
-        if (!metaTag) {
-          metaTag = document.createElement('meta');
-          metaTag.setAttribute('property', property);
-          document.head.appendChild(metaTag);
-        }
-        metaTag.setAttribute('content', content);
-      };
-  
-      // Atualizar as meta tags do Open Graph
-      updateMetaTag('og:title', `${restaurant.name} - PG Menu`);
-      updateMetaTag('og:description', restaurant.description || 'Cardápio digital do restaurante');
-      updateMetaTag('og:url', window.location.href);
-      updateMetaTag('og:image', restaurant.logo_url || '/default-image.png');
-    }
-  }, [restaurant]);
-
-  useEffect(() => {
-    if (restaurant) {
-      // Atualizar o título da página
-      document.title = `${restaurant.name} - PG Menu`;
-
-      // Atualizar as meta tags do Open Graph
-      const metaTitle = document.querySelector('meta[property="og:title"]');
-      if (metaTitle) {
-        metaTitle.setAttribute('content', `${restaurant.name} - PG Menu`);
-      }
-
-      const metaDescription = document.querySelector('meta[property="og:description"]');
-      if (metaDescription) {
-        metaDescription.setAttribute('content', restaurant.description || 'Cardápio digital do restaurante');
-      }
-
-      const metaUrl = document.querySelector('meta[property="og:url"]');
-      if (metaUrl) {
-        metaUrl.setAttribute('content', window.location.href);
-      }
-
-      const metaImage = document.querySelector('meta[property="og:image"]');
-      if (metaImage && restaurant.logo_url) {
-        metaImage.setAttribute('content', restaurant.logo_url);
-      }
-    }
-  }, [restaurant]);
-
   useEffect(() => {
     if (restaurant?.customization) {
       const { primaryColor, secondaryColor, backgroundColor, textColor } = restaurant.customization;
 
-      // Aplicar as cores ao documento
       const root = document.documentElement;
       if (primaryColor) root.style.setProperty('--primary', primaryColor);
       if (secondaryColor) root.style.setProperty('--secondary', secondaryColor);
@@ -165,7 +144,7 @@ const RestaurantMenu = () => {
     enabled: !!restaurant?.id,
   });
 
-  // Set initial active category when categories are loadeds
+  // Set initial active category when categories are loaded
   useEffect(() => {
     if (categories.length > 0 && !activeCategory) {
       setActiveCategory(categories[0].id);
@@ -178,6 +157,18 @@ const RestaurantMenu = () => {
       item.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
+
+  const handleAddToCart = (item: MenuItemType) => {
+    setCart([...cart, item]);
+  };
+
+  const handleRemoveItem = (itemId: number) => {
+    setCart(cart.filter((item) => item.id !== itemId));
+  };
+
+  const handleFinalizeOrder = () => {
+    setShowTableOrderModal(true);
+  };
 
   if (loading) {
     return (
@@ -210,16 +201,108 @@ const RestaurantMenu = () => {
             onCategoryChange={setActiveCategory}
             headerHeight={headerHeight}
           />
+          <div className="flex justify-center gap-4 mt-4">
+            <button 
+              className="flex items-center justify-center py-2 px-4 rounded-lg shadow-md hover:opacity-90 transition-opacity"
+              style={{ 
+                backgroundColor: 'var(--background)', 
+                color: 'var(--text)' 
+              }}
+              onClick={() => setIsTableOrderActive(true)}
+            >
+              <QrCodeIcon className="w-6 h-6 mr-2" />
+              Pedir na Mesa
+            </button>
+            <button 
+              className="flex items-center justify-center py-2 px-4 rounded-lg shadow-md hover:opacity-90 transition-opacity"
+              style={{ 
+                backgroundColor: 'var(--background)', 
+                color: 'var(--text)' 
+              }}
+            >
+              <TruckIcon className="w-6 h-6 mr-2" />
+              Delivery
+            </button>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 md:gap-6 mt-4 sm:mt-6 md:mt-8">
             {filteredItems.map((item) => (
               <MenuItem 
                 key={item.id} 
-                {...item} 
+                {...item}
+                onAddToCart={() => handleAddToCart(item)}
+                showAddButton={isTableOrderActive}
               />
             ))}
           </div>
         </div>
       </main>
+      {isTableOrderActive && (
+        <div 
+          className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white shadow-lg rounded-lg p-2 w-full max-w-xs cursor-pointer"
+          style={{ backgroundColor: 'var(--text)' }}
+          onClick={() => setShowCartModal(true)} // Abre o CartModal ao clicar em qualquer lugar da barra
+        >
+          <div className="flex justify-between items-center">
+            {/* Bolinha com o número de itens e "Ver Carrinho" */}
+            <div className="flex items-center gap-2">
+              {/* Bolinha com o número de itens */}
+              <div 
+                className="w-5 h-5 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: 'var(--background)' }} // Cor de fundo da bolinha
+              >
+                <span 
+                  className="text-xs font-semibold"
+                  style={{ color: 'var(--text)' }} // Cor do texto (número de itens)
+                >
+                  {cart.length}
+                </span>
+              </div>
+
+              {/* Texto "Ver Carrinho" */}
+              <span className="text-sm font-semibold" style={{ color: 'var(--background)' }}>Ver Carrinho</span>
+            </div>
+
+            {/* Valor total */}
+            <span className="text-sm font-semibold" style={{ color: 'var(--background)' }}>
+              R${cart.reduce((total, item) => {
+                // Verifica se o item está em promoção e se tem um preço promocional
+                if (item.is_promotional && item.promotional_price) {
+                  return total + item.promotional_price; // Usa o preço promocional
+                }
+                return total + item.price; // Usa o preço normal
+              }, 0).toFixed(2)}
+            </span>
+          </div>
+        </div>
+      )}
+      {showCartModal && (
+        <CartModal
+          cart={cart}
+          onRemoveItem={handleRemoveItem}
+          onClose={() => setShowCartModal(false)}
+          onConfirmOrder={(name, phone) => {
+            // Aqui você pode processar os dados do pedido (ex: enviar para o backend)
+            setCustomerName(name);
+            console.log("Pedido confirmado:", { name, phone });
+
+            // Fecha o modal do carrinho
+            setShowCartModal(false);
+
+            // Abre o modal do TableOrder
+            setShowTableOrderModal(true);
+          }}
+        />
+      )}
+
+      {showTableOrderModal && (
+        <TableOrder
+          onClose={() => setShowTableOrderModal(false)}
+          cart={cart} // Passar o carrinho como prop
+          tableToken={tableToken} // Passar o token da mesa (se disponível)
+          restaurantId={restaurant?.id} // Passar o ID do restaurante
+          customerName={customerName}
+        />
+      )}
       <BackToTop />
       <Footer restaurant={restaurant} />
     </div>

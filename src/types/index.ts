@@ -48,3 +48,13 @@ export interface Restaurant {
     layout?: "grid" | "list";
   };
 }
+
+export type Table = {
+  id: string; // Alterado de number para string
+  table_number: number;
+  token: string;
+  restaurant_id: number;
+  customer_name: string;
+  created_at?: string;
+  updated_at?: string;
+};

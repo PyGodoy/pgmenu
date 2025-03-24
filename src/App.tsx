@@ -26,6 +26,7 @@ const App = () => (
           <Route path="/invite-signup" element={<InviteSignUp />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/:restaurantSlug" element={<RestaurantMenu />} />
+          <Route path="/:restaurantSlug/:tableToken" element={<RestaurantMenu />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
