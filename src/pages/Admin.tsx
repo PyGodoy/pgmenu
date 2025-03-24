@@ -835,7 +835,7 @@ const Admin = () => {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {tables.map((table) => (
                   <div key={table.id} className="flex flex-col items-center">
-                    <QRCodeSVG value={`https://e6fa-170-239-226-162.ngrok-free.app/${restaurant?.slug || 'seu-restaurante'}/${table.token}`} size={200} />
+                    <QRCodeSVG value={`https://d23c-170-239-226-162.ngrok-free.app/${restaurant?.slug || 'seu-restaurante'}/${table.token}`} size={200} />
                     <p className="mt-2 text-sm text-text">Mesa {table.tableNumber}</p>
                   </div>
                 ))}

@@ -77,7 +77,7 @@ export const TableOrder = ({ onClose, tableToken, cart, restaurantId, customerNa
     try {
       // Verifica se o customerName está presente
       if (!customerName) {
-        alert("Nome do cliente não foi informado."); // Exibe um alerta se o nome não estiver presente
+        alert("Nome do cliente não foi informado.");
         return;
       }
 
@@ -86,87 +86,90 @@ export const TableOrder = ({ onClose, tableToken, cart, restaurantId, customerNa
         throw new Error("Seu navegador não suporta acesso à câmera.");
       }
 
-      // Lista todos os dispositivos de mídia disponíveis
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      // Solicita acesso à câmera de forma mais simples, preferindo a traseira se disponível
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' }
+        });
+        
+        // Define o estado da câmera como ativa
+        setCameraActive(true);
+        setErrorMessage(null);
 
-      // Encontra a câmera traseira
-      const rearCamera = videoDevices.find(device => 
-        device.label.toLowerCase().includes('back') || 
-        device.label.toLowerCase().includes('rear') ||
-        device.label.toLowerCase().includes('environment')
-      );
+        // Exibe o vídeo da câmera em um elemento <video>
+        const videoElement = document.createElement("video");
+        videoElement.srcObject = stream;
+        videoElement.autoplay = true;
+        videoElement.playsInline = true; // Importante para iOS
+        
+        // Configurar estilo do vídeo para manter proporções e ficar dentro do container
+        videoElement.style.maxWidth = "100%";
+        videoElement.style.maxHeight = "100%";
+        videoElement.style.objectFit = "contain";
 
-      if (!rearCamera) {
-        throw new Error("Câmera traseira não encontrada.");
-      }
-
-      // Solicita acesso à câmera traseira
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          deviceId: rearCamera.deviceId,
-          facingMode: { ideal: 'environment' },
-        },
-      });
-
-      // Define o estado da câmera como ativa
-      setCameraActive(true);
-      setErrorMessage(null);
-
-      // Exibe o vídeo da câmera em um elemento <video>
-      const videoElement = document.createElement("video");
-      videoElement.srcObject = stream;
-      videoElement.autoplay = true;
-
-      // Adiciona o vídeo ao modal
-      const cameraContainer = document.getElementById("camera-container");
-      if (cameraContainer) {
-        cameraContainer.innerHTML = "";
-        cameraContainer.appendChild(videoElement);
-      }
-
-      // Cria um canvas para processar os frames do vídeo
-      const canvasElement = document.createElement("canvas");
-      const canvasContext = canvasElement.getContext("2d");
-
-      // Função para verificar o QR Code em cada frame
-      const checkQRCode = () => {
-        if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
-          canvasElement.height = videoElement.videoHeight;
-          canvasElement.width = videoElement.videoWidth;
-
-          // Desenha o frame atual do vídeo no canvas
-          canvasContext?.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
-
-          // Obtém os dados da imagem do canvas
-          const imageData = canvasContext?.getImageData(0, 0, canvasElement.width, canvasElement.height);
-
-          if (imageData) {
-            // Usa a biblioteca jsQR para decodificar o QR Code
-            const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-            // Se um QR Code for encontrado
-            if (code) {
-              console.log("Código QR encontrado:", code.data);
-
-              // Enviar o pedido para o painel administrativo
-              sendOrderToAdmin(tableToken, cart, restaurantId, customerName);
-
-              // Para de verificar os frames
-              return;
-            }
-          }
+        // Adiciona o vídeo ao modal
+        const cameraContainer = document.getElementById("camera-container");
+        if (cameraContainer) {
+          cameraContainer.innerHTML = "";
+          cameraContainer.appendChild(videoElement);
         }
 
-        // Continua verificando os frames
-        requestAnimationFrame(checkQRCode);
-      };
+        // Cria um canvas para processar os frames do vídeo
+        const canvasElement = document.createElement("canvas");
+        const canvasContext = canvasElement.getContext("2d");
 
-      // Inicia a verificação do QR Code quando o vídeo estiver pronto
-      videoElement.addEventListener("loadeddata", checkQRCode);
+        // Função para verificar o QR Code em cada frame
+        const checkQRCode = () => {
+          if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+            canvasElement.height = videoElement.videoHeight;
+            canvasElement.width = videoElement.videoWidth;
+
+            // Desenha o frame atual do vídeo no canvas
+            canvasContext?.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+
+            // Obtém os dados da imagem do canvas
+            const imageData = canvasContext?.getImageData(0, 0, canvasElement.width, canvasElement.height);
+
+            if (imageData) {
+              // Usa a biblioteca jsQR para decodificar o QR Code
+              const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+              // Se um QR Code for encontrado
+              if (code) {
+                console.log("Código QR encontrado:", code.data);
+
+                // Para a câmera quando encontrar o QR code
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+
+                // Enviar o pedido para o painel administrativo
+                sendOrderToAdmin(tableToken, cart, restaurantId, customerName);
+
+                // Para de verificar os frames
+                return;
+              }
+            }
+          }
+
+          // Continua verificando os frames
+          requestAnimationFrame(checkQRCode);
+        };
+
+        // Inicia a verificação do QR Code quando o vídeo estiver pronto
+        videoElement.addEventListener("loadeddata", checkQRCode);
+      } catch (error: any) {
+        console.error("Erro de acesso à câmera:", error);
+        if (error.name === 'NotAllowedError') {
+          setErrorMessage("Acesso à câmera negado. Por favor, permita o acesso nas configurações do navegador.");
+        } else if (error.name === 'NotFoundError') {
+          setErrorMessage("Nenhuma câmera encontrada no dispositivo.");
+        } else {
+          setErrorMessage(`Erro ao acessar a câmera: ${error.message}`);
+        }
+        throw error; // Propaga o erro para o catch externo
+      }
     } catch (error) {
-      console.error("Erro ao acessar a câmera:", error);
-      setErrorMessage("Não foi possível acessar a câmera. Verifique as permissões.");
+      console.error("Erro geral na função handleScanQRCode:", error);
     }
   };
 
@@ -191,15 +194,23 @@ export const TableOrder = ({ onClose, tableToken, cart, restaurantId, customerNa
             <img
               src="/scaneie.png"
               alt="Scaneie o QR Code"
-              className="w-50 h-32 object-cover"
+              className="w-32 h-32 object-contain"
             />
           </div>
         </div>
 
-        <div id="camera-container" className="mb-4">
-          {cameraActive && (
-            <p className="text-sm text-gray-600 text-center">
+        <div 
+          id="camera-container" 
+          className="mb-4 bg-gray-100 rounded overflow-hidden flex items-center justify-center"
+          style={{ height: '180px' }}
+        >
+          {cameraActive ? (
+            <p className="text-sm text-gray-600 text-center absolute z-10 bg-white bg-opacity-70 px-2 py-1 rounded">
               Aponte a câmera para o código QR da mesa.
+            </p>
+          ) : (
+            <p className="text-sm text-gray-600 text-center">
+              Clique no botão abaixo para ativar a câmera.
             </p>
           )}
         </div>
@@ -218,6 +229,20 @@ export const TableOrder = ({ onClose, tableToken, cart, restaurantId, customerNa
         >
           <QrCodeIcon className="w-5 h-5 mr-2" />
           Escanear Código QR
+        </Button>
+        
+        <Button
+          className="w-full mt-2 text-sm"
+          variant="outline"
+          onClick={() => {
+            if (tableToken && cart.length > 0 && restaurantId) {
+              sendOrderToAdmin(tableToken, cart, restaurantId, customerName);
+            } else {
+              setErrorMessage("Não é possível enviar o pedido sem o token da mesa.");
+            }
+          }}
+        >
+          Continuar sem escanear
         </Button>
       </div>
     </div>
