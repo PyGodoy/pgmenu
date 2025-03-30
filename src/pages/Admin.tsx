@@ -134,6 +134,63 @@ const Admin = () => {
     fetchRestaurantAndTables();
   }, [navigate, toast]);
 
+  const handleFinalizeTable = async (tableToken: string) => {
+    try {
+      // 1. Primeiro deleta todos os pedidos associados à mesa
+      const { error: deleteError } = await supabase
+        .from('orders')
+        .delete()
+        .eq('table_token', tableToken);
+  
+      if (deleteError) throw deleteError;
+  
+      // 2. Encontra a mesa correspondente
+      const { data: tableData, error: tableError } = await supabase
+        .from('tables')
+        .select('*')
+        .eq('token', tableToken)
+        .single();
+  
+      if (tableError) throw tableError;
+      if (!tableData) throw new Error("Mesa não encontrada");
+  
+      // 3. Gera um novo token para a mesa
+      const newToken = uuidv4();
+  
+      // 4. Atualiza a mesa com o novo token
+      const { error: updateError } = await supabase
+        .from('tables')
+        .update({ token: newToken })
+        .eq('token', tableToken);
+  
+      if (updateError) throw updateError;
+  
+      // 5. Atualiza o estado local
+      setTables(prevTables => 
+        prevTables.map(table => 
+          table.token === tableToken 
+            ? { ...table, token: newToken } 
+            : table
+        )
+      );
+  
+      toast({
+        title: "Mesa finalizada com sucesso!",
+        description: "Todos os pedidos foram removidos e a mesa foi reiniciada.",
+      });
+  
+      // 6. Atualiza a lista de pedidos
+      fetchOrders();
+    } catch (error) {
+      console.error("Erro ao finalizar mesa:", error);
+      toast({
+        title: "Erro ao finalizar mesa",
+        description: "Ocorreu um erro ao processar a finalização da mesa.",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     if (!restaurant?.id) return;
     
@@ -835,7 +892,7 @@ const Admin = () => {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {tables.map((table) => (
                   <div key={table.id} className="flex flex-col items-center">
-                    <QRCodeSVG value={`https://d23c-170-239-226-162.ngrok-free.app/${restaurant?.slug || 'seu-restaurante'}/${table.token}`} size={200} />
+                    <QRCodeSVG value={` https://a2de-45-234-137-54.ngrok-free.app/${restaurant?.slug || 'seu-restaurante'}/${table.token}`} size={200} />
                     <p className="mt-2 text-sm text-text">Mesa {table.tableNumber}</p>
                   </div>
                 ))}
@@ -855,6 +912,7 @@ const Admin = () => {
                 orders={orders}
                 tables={tables}
                 onUpdateOrderStatus={handleUpdateOrderStatus}
+                onTableFinalized={handleFinalizeTable}
                 restaurantId={restaurant?.id}
               />
             </CardContent>

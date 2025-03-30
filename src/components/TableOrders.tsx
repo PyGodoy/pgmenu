@@ -23,10 +23,11 @@ interface TableOrdersProps {
     orders: any[];
     tables: { id: string; tableNumber: number; token: string }[];
     onUpdateOrderStatus: (orderId: string, status: string) => void;
+    onTableFinalized?: (tableToken: string) => void;
     restaurantId: number;
 }
 
-export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId }: TableOrdersProps) => {
+export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId, onTableFinalized }: TableOrdersProps) => {
     // Usar uma chave de dependência para forçar a rerendenização
     const [realtimeKey, setRealtimeKey] = useState(Date.now());
     const [localOrders, setLocalOrders] = useState(orders);
@@ -57,7 +58,6 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId 
 
   const handleConfirmFinalization = async (tableNumber) => {
     try {
-      // 1. Encontrar a mesa a ser finalizada
       const tableToFinalize = localTables.find(t => t.tableNumber === parseInt(tableNumber));
       
       if (!tableToFinalize) {
@@ -65,31 +65,31 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId 
         return;
       }
       
-      // 2. Deletar todos os pedidos da mesa no Supabase
       const { error: deleteOrdersError } = await supabase
         .from('orders')
         .delete()
-        .eq('table_token', tableToFinalize.token); // Deletar todos os pedidos com o token da mesa
-  
+        .eq('table_token', tableToFinalize.token);
+
       if (deleteOrdersError) throw deleteOrdersError;
-  
-      // 3. Atualizar o estado local
+
       setLocalOrders(prev => prev.filter(order => 
         order.table_token !== tableToFinalize.token
       ));
-  
-      // Forçar rerrenderização
+
       setRealtimeKey(Date.now());
       
       console.log(`Pedidos da mesa ${tableNumber} finalizados e removidos`);
       
-      // 4. Fechar o modal
-      handleCloseModal();
+      // Chame a callback para notificar o componente pai
+      if (onTableFinalized) {
+        onTableFinalized(tableToFinalize.token);
+      }
       
+      handleCloseModal();
     } catch (error) {
       console.error("Erro ao finalizar mesa:", error);
     }
-  };
+};
 
   // Função para agrupar os pedidos por mesa
   const groupOrdersByTable = (orders: any[]) => {

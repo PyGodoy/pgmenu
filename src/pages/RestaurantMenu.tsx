@@ -8,9 +8,10 @@ import { Footer } from "@/components/Footer";
 import { BackToTop } from "@/components/BackToTop";
 import { supabase } from "@/integrations/supabase/client";
 import type { Category, MenuItem as MenuItemType, Restaurant } from "@/types";
-import { QrCodeIcon, TruckIcon } from "lucide-react";
+import { QrCodeIcon, TruckIcon, ClipboardListIcon } from "lucide-react";
 import { TableOrder } from "@/components/TableOrder";
 import { CartModal } from "@/components/CartModal"; // Importe o novo componente
+import { FinalizeTableModal } from "@/components/FinalizeTableModal";
 
 const RestaurantMenu = () => {
   const { restaurantSlug, tableToken } = useParams();
@@ -23,6 +24,11 @@ const RestaurantMenu = () => {
   const [showTableOrderModal, setShowTableOrderModal] = useState(false);
   const [showCartModal, setShowCartModal] = useState(false); // Estado para controlar o modal do carrinho
   const [customerName, setCustomerName] = useState("");
+  const [showOrdersModal, setShowOrdersModal] = useState(false);
+  const [tableOrders, setTableOrders] = useState<any>(null);
+  const [hasOrders, setHasOrders] = useState(false);
+  const [isRefreshingOrders, setIsRefreshingOrders] = useState(false);
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
 
   // Fetch restaurant data
   const { data: restaurant } = useQuery<Restaurant>({
@@ -82,12 +88,95 @@ const RestaurantMenu = () => {
     }
   };
 
+  useEffect(() => {
+    if (!tableToken || !restaurant?.id) return;
+
+    const channel = supabase
+        .channel(`realtime-orders-${tableToken}`)
+        .on(
+            'postgres_changes',
+            {
+                event: '*', // Escuta INSERT, UPDATE e DELETE
+                schema: 'public',
+                table: 'orders',
+                filter: `table_token=eq.${tableToken}`
+            },
+            async (payload) => {
+                console.log('Mudança detectada:', payload.eventType);
+                await checkTableOrders(tableToken); // Força re-verificação
+            }
+        )
+        .subscribe();
+
+    return () => {
+        supabase.removeChannel(channel);
+    };
+}, [tableToken, restaurant?.id]);
+
+const checkTableOrders = async (token: string) => {
+  try {
+      const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('table_token', token);
+
+      if (error) throw error;
+
+      const hasOrdersNow = data && data.length > 0;
+      setHasOrders(hasOrdersNow); // Atualiza o estado
+
+      if (hasOrdersNow) {
+          const { data: tableData, error: tableError } = await supabase
+              .from('tables')
+              .select('table_number')
+              .eq('token', token)
+              .single();
+
+          if (tableError) throw tableError;
+
+          setTableOrders({
+              tableNumber: tableData?.table_number,
+              orders: data
+          });
+      } else {
+          // Se não há pedidos, limpa o estado
+          setTableOrders(null);
+      }
+
+      return hasOrdersNow;
+  } catch (error) {
+      console.error("Erro ao verificar pedidos:", error);
+      return false;
+  } finally {
+      setInitialCheckDone(true);
+  }
+};
+
+  useEffect(() => {
+    if (!tableToken || !showOrdersModal) return;
+  
+    const intervalId = setInterval(() => {
+      checkTableOrders(tableToken);
+    }, 10000);
+  
+    return () => clearInterval(intervalId);
+  }, [tableToken, showOrdersModal]);
+
     // Verificar se o token da mesa é válido
     useEffect(() => {
       if (tableToken) {
         verifyTableToken(tableToken);
+        checkTableOrders(tableToken);
       }
     }, [tableToken]);
+
+    const handleViewOrders = () => {
+      // Refresh orders data before showing the modal
+      if (tableToken) {
+        checkTableOrders(tableToken);
+      }
+      setShowOrdersModal(true);
+    };
 
   // Aplicar as personalizações dinamicamente
   useEffect(() => {
@@ -186,6 +275,7 @@ const RestaurantMenu = () => {
     );
   }
 
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header 
@@ -201,29 +291,45 @@ const RestaurantMenu = () => {
             onCategoryChange={setActiveCategory}
             headerHeight={headerHeight}
           />
-          <div className="flex justify-center gap-4 mt-4">
-            <button 
-              className="flex items-center justify-center py-2 px-4 rounded-lg shadow-md hover:opacity-90 transition-opacity"
-              style={{ 
-                backgroundColor: 'var(--background)', 
-                color: 'var(--text)' 
-              }}
-              onClick={() => setIsTableOrderActive(true)}
-            >
-              <QrCodeIcon className="w-6 h-6 mr-2" />
-              Pedir na Mesa
-            </button>
-            <button 
-              className="flex items-center justify-center py-2 px-4 rounded-lg shadow-md hover:opacity-90 transition-opacity"
-              style={{ 
-                backgroundColor: 'var(--background)', 
-                color: 'var(--text)' 
-              }}
-            >
-              <TruckIcon className="w-6 h-6 mr-2" />
-              Delivery
-            </button>
-          </div>
+    <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mt-4 px-2">
+      <button 
+        className="flex items-center justify-center py-2 px-3 sm:px-4 rounded-lg shadow-md hover:opacity-90 transition-opacity text-xs sm:text-sm"
+        style={{ 
+          backgroundColor: 'var(--background)', 
+          color: 'var(--text)',
+          minWidth: '120px'
+        }}
+        onClick={() => setIsTableOrderActive(true)}
+      >
+        <QrCodeIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
+        Pedir na Mesa
+      </button>
+      <button 
+        className="flex items-center justify-center py-2 px-3 sm:px-4 rounded-lg shadow-md hover:opacity-90 transition-opacity text-xs sm:text-sm"
+        style={{ 
+          backgroundColor: 'var(--background)', 
+          color: 'var(--text)',
+          minWidth: '120px'
+        }}
+      >
+        <TruckIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
+        Delivery
+      </button>
+      {(hasOrders || !initialCheckDone) && (
+        <button 
+          className="flex items-center justify-center py-2 px-3 sm:px-4 rounded-lg shadow-md hover:opacity-90 transition-opacity text-xs sm:text-sm"
+          style={{ 
+            backgroundColor: 'var(--background)', 
+            color: 'var(--text)',
+            minWidth: '120px'
+          }}
+          onClick={handleViewOrders}
+        >
+          <ClipboardListIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
+          Ver Pedidos
+        </button>
+      )}
+    </div>
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 md:gap-6 mt-4 sm:mt-6 md:mt-8">
             {filteredItems.map((item) => (
               <MenuItem 
@@ -301,6 +407,16 @@ const RestaurantMenu = () => {
           tableToken={tableToken} // Passar o token da mesa (se disponível)
           restaurantId={restaurant?.id} // Passar o ID do restaurante
           customerName={customerName}
+        />
+      )}
+      {/* Modal de Visualização de Pedidos */}
+      {showOrdersModal && tableOrders && (
+        <FinalizeTableModal
+          isOpen={showOrdersModal}
+          onClose={() => setShowOrdersModal(false)}
+          table={tableOrders}
+          onConfirmFinalization={() => {/* Não será usado, apenas para satisfazer a prop */}}
+          hideConfirmButton={true}
         />
       )}
       <BackToTop />

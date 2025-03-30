@@ -12,13 +12,15 @@ import {
     onClose: () => void;
     table: any;
     onConfirmFinalization: () => void;
+    hideConfirmButton?: boolean;
   }
   
   export const FinalizeTableModal = ({ 
     isOpen, 
     onClose, 
     table, 
-    onConfirmFinalization 
+    onConfirmFinalization,
+    hideConfirmButton = false // Padrão: mostrar o botão
   }: FinalizeTableModalProps) => {
     if (!table) return null;
   
@@ -75,7 +77,9 @@ import {
           className="sm:max-w-md md:max-w-lg lg:max-w-xl"
         >
           <DialogHeader>
-            <DialogTitle style={{ color: 'var(--primary)' }}>Finalizar Mesa {tableNumber}</DialogTitle>
+          <DialogTitle style={{ color: 'var(--primary)' }}>
+            {hideConfirmButton ? 'Pedidos da Mesa' : 'Finalizar Mesa'} {tableNumber}
+          </DialogTitle>
           </DialogHeader>
   
           {/* Conteúdo com rolagem */}
@@ -136,16 +140,18 @@ import {
             >
               Fechar
             </Button>
-            <Button
-              variant="default"
-              onClick={() => {
-                // Chamar a função para finalizar a mesa e excluir os pedidos
-                onConfirmFinalization();
-              }}
-              style={{ background: 'var(--primary)', color: 'white' }}
-            >
-              Confirmar Finalização
-            </Button>
+            {!hideConfirmButton && (
+              <Button
+                variant="default"
+                onClick={() => {
+                  // Chamar a função para finalizar a mesa e excluir os pedidos
+                  onConfirmFinalization();
+                }}
+                style={{ background: 'var(--primary)', color: 'white' }}
+              >
+                Confirmar Finalização
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
