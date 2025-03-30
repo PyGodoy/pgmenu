@@ -291,45 +291,53 @@ const checkTableOrders = async (token: string) => {
             onCategoryChange={setActiveCategory}
             headerHeight={headerHeight}
           />
-    <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mt-4 px-2">
+    <div className="flex flex-wrap justify-center gap-4 mt-4 px-2">
+  <div className="flex gap-4 w-full sm:w-auto">
+    <button 
+      className={`flex items-center justify-center py-3 px-4 sm:px-5 rounded-lg shadow-md transition-all text-sm sm:text-base w-full max-w-xs ${isTableOrderActive ? 'ring-2 ring-offset-2' : ''}`}
+      style={{ 
+        backgroundColor: isTableOrderActive ? 'red' : 'white', 
+        color: isTableOrderActive ? 'white' : 'red',
+      }}
+      onClick={() => {
+        setIsTableOrderActive(!isTableOrderActive);
+        if (!isTableOrderActive) {
+          setCart([]); // Limpa o carrinho quando desativa
+        }
+      }}
+    >
+      <QrCodeIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+      Pedir na Mesa
+    </button>
+
+    {(hasOrders || !initialCheckDone) && (
       <button 
-        className="flex items-center justify-center py-2 px-3 sm:px-4 rounded-lg shadow-md hover:opacity-90 transition-opacity text-xs sm:text-sm"
+        className="flex items-center justify-center py-3 px-4 sm:px-5 rounded-lg shadow-md hover:opacity-90 transition-all text-sm sm:text-base w-full max-w-xs"
         style={{ 
           backgroundColor: 'var(--background)', 
           color: 'var(--text)',
-          minWidth: '120px'
         }}
-        onClick={() => setIsTableOrderActive(true)}
+        onClick={handleViewOrders}
       >
-        <QrCodeIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
-        Pedir na Mesa
+        <ClipboardListIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+        Ver Pedidos
       </button>
-      <button 
-        className="flex items-center justify-center py-2 px-3 sm:px-4 rounded-lg shadow-md hover:opacity-90 transition-opacity text-xs sm:text-sm"
-        style={{ 
-          backgroundColor: 'var(--background)', 
-          color: 'var(--text)',
-          minWidth: '120px'
-        }}
-      >
-        <TruckIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
-        Delivery
-      </button>
-      {(hasOrders || !initialCheckDone) && (
-        <button 
-          className="flex items-center justify-center py-2 px-3 sm:px-4 rounded-lg shadow-md hover:opacity-90 transition-opacity text-xs sm:text-sm"
-          style={{ 
-            backgroundColor: 'var(--background)', 
-            color: 'var(--text)',
-            minWidth: '120px'
-          }}
-          onClick={handleViewOrders}
-        >
-          <ClipboardListIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
-          Ver Pedidos
-        </button>
-      )}
-    </div>
+    )}
+  </div>
+
+  <button 
+    className="flex items-center justify-center py-3 px-4 sm:px-5 rounded-lg shadow-md hover:opacity-90 transition-all text-sm sm:text-base w-full max-w-xs"
+    style={{ 
+      backgroundColor: 'var(--background)', 
+      color: 'var(--text)',
+    }}
+  >
+    <TruckIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+    Delivery
+  </button>
+</div>
+
+
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 md:gap-6 mt-4 sm:mt-6 md:mt-8">
             {filteredItems.map((item) => (
               <MenuItem 
