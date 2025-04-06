@@ -58,32 +58,32 @@ export const OrdersCard = ({ restaurantId, tables }: OrdersCardProps) => {
     try {
       // Obter todos os tokens de mesa existentes
       const existingTableTokens = tables.map(table => table.token);
-      
+
       // Encontrar pedidos com tokens que não correspondem a mesas existentes
-      const ordersToDelete = orders.filter(order => 
+      const ordersToDelete = orders.filter(order =>
         !existingTableTokens.includes(order.table_token)
       );
-  
+
       if (ordersToDelete.length === 0) return;
-  
+
       // Extrair IDs dos pedidos para exclusão
       const orderIdsToDelete = ordersToDelete.map(order => order.id);
-  
+
       // Excluir os pedidos no Supabase
       const { error } = await supabase
         .from('orders')
         .delete()
         .in('id', orderIdsToDelete);
-  
+
       if (error) throw error;
-  
+
       // Atualizar estado local removendo os pedidos excluídos
-      setOrders(currentOrders => 
-        currentOrders.filter(order => 
+      setOrders(currentOrders =>
+        currentOrders.filter(order =>
           existingTableTokens.includes(order.table_token)
         )
       );
-  
+
       toast({
         title: "Pedidos limpos",
         description: `${ordersToDelete.length} pedidos de mesas inexistentes foram removidos.`,
@@ -101,9 +101,9 @@ export const OrdersCard = ({ restaurantId, tables }: OrdersCardProps) => {
 
   useEffect(() => {
     if (!restaurantId) return;
-  
+
     fetchOrders();
-  
+
     const channel = supabase
       .channel(`orders-${restaurantId}`)
       .on(
@@ -117,12 +117,12 @@ export const OrdersCard = ({ restaurantId, tables }: OrdersCardProps) => {
         () => fetchOrders()
       )
       .subscribe();
-  
+
     return () => {
       supabase.removeChannel(channel);
     };
   }, [restaurantId]);
-  
+
   // Novo useEffect para verificar mesas inexistentes
   useEffect(() => {
     if (orders.length > 0 && tables.length > 0) {
@@ -138,19 +138,19 @@ export const OrdersCard = ({ restaurantId, tables }: OrdersCardProps) => {
         .select('customer_name')
         .eq('id', orderIdNum)
         .single();
-  
+
       if (fetchError) throw fetchError;
-      
+
       const { error } = await supabase
         .from('orders')
-        .update({ 
+        .update({
           status: 'completed',
           customer_name: existingOrder.customer_name
         })
         .eq('id', orderIdNum);
-  
+
       if (error) throw error;
-      
+
     } catch (error) {
       console.error("Erro ao completar o pedido:", error);
       toast({
@@ -195,11 +195,11 @@ export const OrdersCard = ({ restaurantId, tables }: OrdersCardProps) => {
         .from('orders')
         .delete()
         .eq('id', orderId);
-  
+
       if (error) throw error;
-  
+
       // Atualiza o estado local
-      setOrders(currentOrders => 
+      setOrders(currentOrders =>
         currentOrders.filter(order => order.id !== orderId)
       );
     } catch (error) {
@@ -228,6 +228,19 @@ export const OrdersCard = ({ restaurantId, tables }: OrdersCardProps) => {
   const pendingOrders = orders.filter(order => order.status !== 'completed');
   const completedOrders = orders.filter(order => order.status === 'completed');
 
+  const groupItems = (items: any[]) => {
+    const grouped: Record<number, any & { quantity: number }> = {};
+    items.forEach(item => {
+      if (grouped[item.id]) {
+        grouped[item.id].quantity += 1;
+      } else {
+        grouped[item.id] = { ...item, quantity: 1 };
+      }
+    });
+    return Object.values(grouped);
+  };
+
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -253,7 +266,7 @@ export const OrdersCard = ({ restaurantId, tables }: OrdersCardProps) => {
                       <span className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
                       Pedidos Pendentes ({pendingOrders.length})
                     </h3>
-                    
+
                     {pendingOrders.length === 0 ? (
                       <div className="text-center py-8 text-gray-500">
                         Nenhum pedido pendente
@@ -278,17 +291,23 @@ export const OrdersCard = ({ restaurantId, tables }: OrdersCardProps) => {
                                   </div>
                                   <Badge variant="secondary">Pendente</Badge>
                                 </div>
-                                
+
                                 <div className="mt-2 space-y-1">
-                                  {parseItems(order.items).map((item: any, idx: number) => (
-                                    <div key={idx} className="text-sm">
-                                      {item.name} - R${(item.is_promotional && item.promotional_price) ? 
-                                        item.promotional_price.toFixed(2) : 
-                                        item.price.toFixed(2)}
-                                    </div>
-                                  ))}
+                                  {groupItems(parseItems(order.items)).map((item: any, idx: number) => {
+                                    const price = item.is_promotional && item.promotional_price
+                                      ? item.promotional_price
+                                      : item.price;
+
+                                    return (
+                                      <div key={idx} className="text-sm flex justify-between">
+                                        <span>{item.quantity}x {item.name}</span>
+                                        <span>R$ {(item.quantity * price).toFixed(2)}</span>
+                                      </div>
+                                    );
+                                  })}
+
                                 </div>
-                                
+
                                 <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                                   {formatDateTime(order.created_at)}
                                 </div>
@@ -315,7 +334,7 @@ export const OrdersCard = ({ restaurantId, tables }: OrdersCardProps) => {
                       <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
                       Pedidos Concluídos ({completedOrders.length})
                     </h3>
-                    
+
                     {completedOrders.length === 0 ? (
                       <div className="text-center py-8 text-gray-500">
                         Nenhum pedido concluído
@@ -340,17 +359,23 @@ export const OrdersCard = ({ restaurantId, tables }: OrdersCardProps) => {
                                   </div>
                                   <Badge variant="outline">Concluído</Badge>
                                 </div>
-                                
+
                                 <div className="mt-2 space-y-1">
-                                  {parseItems(order.items).map((item: any, idx: number) => (
-                                    <div key={idx} className="text-sm">
-                                      {item.name} - R${(item.is_promotional && item.promotional_price) ? 
-                                        item.promotional_price.toFixed(2) : 
-                                        item.price.toFixed(2)}
-                                    </div>
-                                  ))}
+                                  {groupItems(parseItems(order.items)).map((item: any, idx: number) => {
+                                    const price = item.is_promotional && item.promotional_price
+                                      ? item.promotional_price
+                                      : item.price;
+
+                                    return (
+                                      <div key={idx} className="text-sm flex justify-between">
+                                        <span>{item.quantity}x {item.name}</span>
+                                        <span>R$ {(item.quantity * price).toFixed(2)}</span>
+                                      </div>
+                                    );
+                                  })}
+
                                 </div>
-                                
+
                                 <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                                   {formatDateTime(order.created_at)}
                                 </div>

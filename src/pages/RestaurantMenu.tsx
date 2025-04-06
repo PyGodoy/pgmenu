@@ -41,10 +41,10 @@ const RestaurantMenu = () => {
           .select('*')
           .eq('slug', restaurantSlug)
           .single();
-        
+
         if (error) throw error;
         if (!data) throw new Error('Restaurant not found');
-        
+
         return {
           id: data.id,
           name: data.name,
@@ -92,33 +92,33 @@ const RestaurantMenu = () => {
     if (!tableToken || !restaurant?.id) return;
 
     const channel = supabase
-        .channel(`realtime-orders-${tableToken}`)
-        .on(
-            'postgres_changes',
-            {
-                event: '*', // Escuta INSERT, UPDATE e DELETE
-                schema: 'public',
-                table: 'orders',
-                filter: `table_token=eq.${tableToken}`
-            },
-            async (payload) => {
-                console.log('Mudança detectada:', payload.eventType);
-                await checkTableOrders(tableToken); // Força re-verificação
-            }
-        )
-        .subscribe();
+      .channel(`realtime-orders-${tableToken}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Escuta INSERT, UPDATE e DELETE
+          schema: 'public',
+          table: 'orders',
+          filter: `table_token=eq.${tableToken}`
+        },
+        async (payload) => {
+          console.log('Mudança detectada:', payload.eventType);
+          await checkTableOrders(tableToken); // Força re-verificação
+        }
+      )
+      .subscribe();
 
     return () => {
-        supabase.removeChannel(channel);
+      supabase.removeChannel(channel);
     };
-}, [tableToken, restaurant?.id]);
+  }, [tableToken, restaurant?.id]);
 
-const checkTableOrders = async (token: string) => {
-  try {
+  const checkTableOrders = async (token: string) => {
+    try {
       const { data, error } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('table_token', token);
+        .from('orders')
+        .select('*')
+        .eq('table_token', token);
 
       if (error) throw error;
 
@@ -126,57 +126,57 @@ const checkTableOrders = async (token: string) => {
       setHasOrders(hasOrdersNow); // Atualiza o estado
 
       if (hasOrdersNow) {
-          const { data: tableData, error: tableError } = await supabase
-              .from('tables')
-              .select('table_number')
-              .eq('token', token)
-              .single();
+        const { data: tableData, error: tableError } = await supabase
+          .from('tables')
+          .select('table_number')
+          .eq('token', token)
+          .single();
 
-          if (tableError) throw tableError;
+        if (tableError) throw tableError;
 
-          setTableOrders({
-              tableNumber: tableData?.table_number,
-              orders: data
-          });
+        setTableOrders({
+          tableNumber: tableData?.table_number,
+          orders: data
+        });
       } else {
-          // Se não há pedidos, limpa o estado
-          setTableOrders(null);
+        // Se não há pedidos, limpa o estado
+        setTableOrders(null);
       }
 
       return hasOrdersNow;
-  } catch (error) {
+    } catch (error) {
       console.error("Erro ao verificar pedidos:", error);
       return false;
-  } finally {
+    } finally {
       setInitialCheckDone(true);
-  }
-};
+    }
+  };
 
   useEffect(() => {
     if (!tableToken || !showOrdersModal) return;
-  
+
     const intervalId = setInterval(() => {
       checkTableOrders(tableToken);
     }, 10000);
-  
+
     return () => clearInterval(intervalId);
   }, [tableToken, showOrdersModal]);
 
-    // Verificar se o token da mesa é válido
-    useEffect(() => {
-      if (tableToken) {
-        verifyTableToken(tableToken);
-        checkTableOrders(tableToken);
-      }
-    }, [tableToken]);
+  // Verificar se o token da mesa é válido
+  useEffect(() => {
+    if (tableToken) {
+      verifyTableToken(tableToken);
+      checkTableOrders(tableToken);
+    }
+  }, [tableToken]);
 
-    const handleViewOrders = () => {
-      // Refresh orders data before showing the modal
-      if (tableToken) {
-        checkTableOrders(tableToken);
-      }
-      setShowOrdersModal(true);
-    };
+  const handleViewOrders = () => {
+    // Refresh orders data before showing the modal
+    if (tableToken) {
+      checkTableOrders(tableToken);
+    }
+    setShowOrdersModal(true);
+  };
 
   // Aplicar as personalizações dinamicamente
   useEffect(() => {
@@ -196,13 +196,13 @@ const checkTableOrders = async (token: string) => {
     queryKey: ['categories', restaurant?.id],
     queryFn: async () => {
       if (!restaurant?.id) return [];
-      
+
       const { data, error } = await supabase
         .from('categories')
         .select('*')
         .eq('restaurant_id', restaurant.id)
         .order('order');
-      
+
       if (error) throw error;
       return data;
     },
@@ -214,18 +214,18 @@ const checkTableOrders = async (token: string) => {
     queryKey: ['menuItems', restaurant?.id, activeCategory],
     queryFn: async () => {
       if (!restaurant?.id) return [];
-      
+
       let query = supabase
         .from('menu_items')
         .select('*')
         .eq('restaurant_id', restaurant.id)
         .eq('active', true)
         .order('order_itens');
-      
+
       if (activeCategory) {
         query = query.eq('category_id', activeCategory);
       }
-      
+
       const { data, error } = await query;
       if (error) throw error;
       return data;
@@ -241,7 +241,7 @@ const checkTableOrders = async (token: string) => {
   }, [categories, activeCategory]);
 
   const filteredItems = menuItems.filter((item) => {
-    const matchesSearch = searchQuery === "" || 
+    const matchesSearch = searchQuery === "" ||
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
@@ -257,6 +257,7 @@ const checkTableOrders = async (token: string) => {
 
   const handleFinalizeOrder = () => {
     setShowTableOrderModal(true);
+    setCart([]);
   };
 
   if (loading) {
@@ -266,7 +267,7 @@ const checkTableOrders = async (token: string) => {
       </div>
     );
   }
-  
+
   if (!restaurant) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -278,8 +279,8 @@ const checkTableOrders = async (token: string) => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header 
-        onSearch={setSearchQuery} 
+      <Header
+        onSearch={setSearchQuery}
         onHeaderHeightChange={setHeaderHeight}
         restaurant={restaurant}
       />
@@ -291,57 +292,57 @@ const checkTableOrders = async (token: string) => {
             onCategoryChange={setActiveCategory}
             headerHeight={headerHeight}
           />
-    <div className="flex flex-wrap justify-center gap-4 mt-4 px-2">
-  <div className="flex gap-4 w-full sm:w-auto">
-    <button 
-      className={`flex items-center justify-center py-3 px-4 sm:px-5 rounded-lg shadow-md transition-all text-sm sm:text-base w-full max-w-xs ${isTableOrderActive ? 'ring-2 ring-offset-2' : ''}`}
-      style={{ 
-        backgroundColor: isTableOrderActive ? 'red' : 'white', 
-        color: isTableOrderActive ? 'white' : 'red',
-      }}
-      onClick={() => {
-        setIsTableOrderActive(!isTableOrderActive);
-        if (!isTableOrderActive) {
-          setCart([]); // Limpa o carrinho quando desativa
-        }
-      }}
-    >
-      <QrCodeIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-      Pedir na Mesa
-    </button>
+          <div className="flex flex-wrap justify-center gap-4 mt-4 px-2">
+            <div className="flex gap-4 w-full sm:w-auto">
+              <button
+                className={`flex items-center justify-center py-3 px-4 sm:px-5 rounded-lg shadow-md transition-all text-sm sm:text-base w-full max-w-xs ${isTableOrderActive ? 'ring-2 ring-offset-2' : ''}`}
+                style={{
+                  backgroundColor: isTableOrderActive ? 'red' : 'white',
+                  color: isTableOrderActive ? 'white' : 'red',
+                }}
+                onClick={() => {
+                  setIsTableOrderActive(!isTableOrderActive);
+                  if (!isTableOrderActive) {
+                    setCart([]); // Limpa o carrinho quando desativa
+                  }
+                }}
+              >
+                <QrCodeIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+                Pedir na Mesa
+              </button>
 
-    {(hasOrders || !initialCheckDone) && (
-      <button 
-        className="flex items-center justify-center py-3 px-4 sm:px-5 rounded-lg shadow-md hover:opacity-90 transition-all text-sm sm:text-base w-full max-w-xs"
-        style={{ 
-          backgroundColor: 'var(--background)', 
-          color: 'var(--text)',
-        }}
-        onClick={handleViewOrders}
-      >
-        <ClipboardListIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-        Ver Pedidos
-      </button>
-    )}
-  </div>
+              {(hasOrders || !initialCheckDone) && (
+                <button
+                  className="flex items-center justify-center py-3 px-4 sm:px-5 rounded-lg shadow-md hover:opacity-90 transition-all text-sm sm:text-base w-full max-w-xs"
+                  style={{
+                    backgroundColor: 'var(--background)',
+                    color: 'var(--text)',
+                  }}
+                  onClick={handleViewOrders}
+                >
+                  <ClipboardListIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+                  Ver Pedidos
+                </button>
+              )}
+            </div>
 
-  <button 
-    className="flex items-center justify-center py-3 px-4 sm:px-5 rounded-lg shadow-md hover:opacity-90 transition-all text-sm sm:text-base w-full max-w-xs"
-    style={{ 
-      backgroundColor: 'var(--background)', 
-      color: 'var(--text)',
-    }}
-  >
-    <TruckIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-    Delivery
-  </button>
-</div>
+            <button
+              className="flex items-center justify-center py-3 px-4 sm:px-5 rounded-lg shadow-md hover:opacity-90 transition-all text-sm sm:text-base w-full max-w-xs"
+              style={{
+                backgroundColor: 'var(--background)',
+                color: 'var(--text)',
+              }}
+            >
+              <TruckIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+              Delivery
+            </button>
+          </div>
 
 
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 md:gap-6 mt-4 sm:mt-6 md:mt-8">
             {filteredItems.map((item) => (
-              <MenuItem 
-                key={item.id} 
+              <MenuItem
+                key={item.id}
                 {...item}
                 onAddToCart={() => handleAddToCart(item)}
                 showAddButton={isTableOrderActive}
@@ -351,7 +352,7 @@ const checkTableOrders = async (token: string) => {
         </div>
       </main>
       {isTableOrderActive && (
-        <div 
+        <div
           className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white shadow-lg rounded-lg p-2 w-full max-w-xs cursor-pointer"
           style={{ backgroundColor: 'var(--text)' }}
           onClick={() => setShowCartModal(true)} // Abre o CartModal ao clicar em qualquer lugar da barra
@@ -360,11 +361,11 @@ const checkTableOrders = async (token: string) => {
             {/* Bolinha com o número de itens e "Ver Carrinho" */}
             <div className="flex items-center gap-2">
               {/* Bolinha com o número de itens */}
-              <div 
+              <div
                 className="w-5 h-5 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: 'var(--background)' }} // Cor de fundo da bolinha
               >
-                <span 
+                <span
                   className="text-xs font-semibold"
                   style={{ color: 'var(--text)' }} // Cor do texto (número de itens)
                 >
@@ -394,13 +395,14 @@ const checkTableOrders = async (token: string) => {
           cart={cart}
           onRemoveItem={handleRemoveItem}
           onClose={() => setShowCartModal(false)}
-          onConfirmOrder={(name, phone) => {
+          onConfirmOrder={(name, confirmedCart) => {
             setCustomerName(name);
-            console.log("Pedido confirmado:", { name, phone });
-            setShowCartModal(false);
+            setCart(confirmedCart); // 👈 garante que o carrinho com quantidade certa seja passado
             setShowTableOrderModal(true);
           }}
-          tableToken={tableToken} // Adicione esta linha
+          
+          onClearCart={() => setCart([])} // nova função passada
+          tableToken={tableToken}
         />
       )}
 
@@ -411,6 +413,7 @@ const checkTableOrders = async (token: string) => {
           tableToken={tableToken} // Passar o token da mesa (se disponível)
           restaurantId={restaurant?.id} // Passar o ID do restaurante
           customerName={customerName}
+          onClearCart={() => setCart([])}
         />
       )}
       {/* Modal de Visualização de Pedidos */}
@@ -419,7 +422,7 @@ const checkTableOrders = async (token: string) => {
           isOpen={showOrdersModal}
           onClose={() => setShowOrdersModal(false)}
           table={tableOrders}
-          onConfirmFinalization={() => {/* Não será usado, apenas para satisfazer a prop */}}
+          onConfirmFinalization={() => {/* Não será usado, apenas para satisfazer a prop */ }}
           hideConfirmButton={true}
         />
       )}

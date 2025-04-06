@@ -12,9 +12,10 @@ interface TableOrderProps {
   cart: MenuItem[];
   restaurantId?: number;
   customerName?: string;
+  onClearCart: () => void;
 }
 
-export const TableOrder = ({ onClose, tableToken, cart, restaurantId, customerName }: TableOrderProps) => {
+export const TableOrder = ({ onClose, tableToken, cart, restaurantId, customerName, onClearCart }: TableOrderProps) => {
   const [cameraActive, setCameraActive] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -65,6 +66,7 @@ export const TableOrder = ({ onClose, tableToken, cart, restaurantId, customerNa
       if (data) {
         console.log("Pedido enviado com sucesso:", data);
         setErrorMessage(null);
+        onClearCart();
         onClose();
       }
     } catch (error) {
