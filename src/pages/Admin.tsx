@@ -882,16 +882,21 @@ const Admin = () => {
                 </Button>
               </CardHeader>
               <CardContent className="px-2 sm:px-6">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {[...tables]
-                    .sort((a, b) => a.tableNumber - b.tableNumber)
-                    .map((table) => (
-                      <div key={table.id} className="flex flex-col items-center">
-                        <QRCodeSVG value={`https://c471-170-239-226-180.ngrok-free.app/${restaurant?.slug || 'seu-restaurante'}/${table.token}`} size={200} />
-                        <p className="mt-2 text-sm text-text">Mesa {table.tableNumber}</p>
-                      </div>
-                    ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                  {[...tables].sort((a, b) => a.tableNumber - b.tableNumber).map((table) => (
+                    <div
+                      key={table.id}
+                      className="flex flex-col items-center justify-center p-4 bg-white rounded-lg shadow-md"
+                    >
+                      <QRCodeSVG
+                        value={`https://c471-170-239-226-180.ngrok-free.app/${restaurant?.slug || 'seu-restaurante'}/${table.token}`}
+                        size={160}
+                      />
+                      <p className="mt-3 text-sm font-semibold text-text">Mesa {table.tableNumber}</p>
+                    </div>
+                  ))}
                 </div>
+
               </CardContent>
             </Card>
           )}
