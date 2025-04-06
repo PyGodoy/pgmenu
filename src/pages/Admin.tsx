@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -39,6 +39,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { QRCodeSVG } from 'qrcode.react';
 import { TableOrders } from "@/components/TableOrders";
 import Navbar from '@/components/Navbar';
+import { OrdersCard } from '@/components/OrdersCard';
 
 const Admin = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -134,9 +135,14 @@ const Admin = () => {
     fetchRestaurantAndTables();
   }, [navigate, toast]);
 
-  const handleFinalizeTable = async (tableToken: string) => {
+  const handleFinalizeTable = async (tableToken: string, onSuccess?: () => void) => {
     try {
-      // 1. Primeiro deleta todos os pedidos associados à mesa
+      // 1. Deletar pedidos
+      const { data: ordersToDelete } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('table_token', tableToken);
+  
       const { error: deleteError } = await supabase
         .from('orders')
         .delete()
@@ -144,20 +150,8 @@ const Admin = () => {
   
       if (deleteError) throw deleteError;
   
-      // 2. Encontra a mesa correspondente
-      const { data: tableData, error: tableError } = await supabase
-        .from('tables')
-        .select('*')
-        .eq('token', tableToken)
-        .single();
-  
-      if (tableError) throw tableError;
-      if (!tableData) throw new Error("Mesa não encontrada");
-  
-      // 3. Gera um novo token para a mesa
+      // 2. Atualizar token da mesa
       const newToken = uuidv4();
-  
-      // 4. Atualiza a mesa com o novo token
       const { error: updateError } = await supabase
         .from('tables')
         .update({ token: newToken })
@@ -165,27 +159,26 @@ const Admin = () => {
   
       if (updateError) throw updateError;
   
-      // 5. Atualiza o estado local
-      setTables(prevTables => 
-        prevTables.map(table => 
-          table.token === tableToken 
-            ? { ...table, token: newToken } 
-            : table
-        )
+      // 3. Atualizar estado
+      setTables(prev => 
+        prev.map(t => t.token === tableToken ? { ...t, token: newToken } : t)
       );
   
+      // 4. Notificar sucesso
       toast({
-        title: "Mesa finalizada com sucesso!",
-        description: "Todos os pedidos foram removidos e a mesa foi reiniciada.",
+        title: "Mesa finalizada!",
+        description: "Pedidos removidos e mesa reiniciada.",
       });
   
-      // 6. Atualiza a lista de pedidos
+      if (onSuccess) onSuccess();
+      
+      // 5. Forçar atualização dos pedidos
       fetchOrders();
+      
     } catch (error) {
       console.error("Erro ao finalizar mesa:", error);
       toast({
         title: "Erro ao finalizar mesa",
-        description: "Ocorreu um erro ao processar a finalização da mesa.",
         variant: "destructive",
       });
     }
@@ -892,7 +885,7 @@ const Admin = () => {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {tables.map((table) => (
                   <div key={table.id} className="flex flex-col items-center">
-                    <QRCodeSVG value={` https://a2de-45-234-137-54.ngrok-free.app/${restaurant?.slug || 'seu-restaurante'}/${table.token}`} size={200} />
+                    <QRCodeSVG value={`https://c471-170-239-226-180.ngrok-free.app/${restaurant?.slug || 'seu-restaurante'}/${table.token}`} size={200} />
                     <p className="mt-2 text-sm text-text">Mesa {table.tableNumber}</p>
                   </div>
                 ))}
@@ -901,22 +894,34 @@ const Admin = () => {
           </Card>
         )}
   
-        {/* Seção de Pedidos por Mesa */}
+        {/* Seção de Ordem de Pedidos */}
         {activeSection === "pedidos" && (
-          <Card className="bg-background shadow-sm mt-6">
-            <CardHeader className="flex flex-col sm:flex-row items-center justify-between pb-3 sm:pb-4">
-              <h2 className="text-xl sm:text-2xl font-semibold text-text mb-3 sm:mb-0">Pedidos por Mesa</h2>
-            </CardHeader>
-            <CardContent className="px-2 sm:px-6">
+          <>
+            <Card className="bg-background shadow-sm mt-6">
+              
+                <OrdersCard 
+                  restaurantId={restaurant?.id} 
+                  tables={tables}
+                />
+              
+            </Card>
+
+            {/* Seção de Pedidos por Mesa */}
+            <Card className="bg-background shadow-sm mt-6">
+              <CardHeader className="flex flex-col sm:flex-row items-center justify-between pb-3 sm:pb-4">
+                <h2 className="text-xl sm:text-2xl font-semibold text-text mb-3 sm:mb-0">Pedidos por Mesa</h2>
+              </CardHeader>
+              <CardContent className="px-2 sm:px-6">
               <TableOrders
                 orders={orders}
                 tables={tables}
                 onUpdateOrderStatus={handleUpdateOrderStatus}
-                onTableFinalized={handleFinalizeTable}
+                onTableFinalized={(tableToken) => handleFinalizeTable(tableToken, fetchOrders)}
                 restaurantId={restaurant?.id}
               />
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </>
         )}
   
         {/* Seção de Cardápio - QR Code */}

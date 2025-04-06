@@ -1,19 +1,51 @@
 import { X, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { MenuItem } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
 
 interface CartModalProps {
   cart: MenuItem[];
   onRemoveItem: (itemId: number) => void;
   onClose: () => void;
   onConfirmOrder: (customerName: string, phone: string, cart: MenuItem[]) => void;
+  tableToken?: string;
 }
 
-export const CartModal = ({ cart, onRemoveItem, onClose, onConfirmOrder }: CartModalProps) => {
+export const CartModal = ({ cart, onRemoveItem, onClose, onConfirmOrder, tableToken }: CartModalProps) => {
   const [customerName, setCustomerName] = useState("");
   const [phone, setPhone] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [existingCustomers, setExistingCustomers] = useState<string[]>([]);
+  const [showCustomerList, setShowCustomerList] = useState(false);
+  const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
+
+  useEffect(() => {
+    if (tableToken) {
+      fetchExistingCustomers();
+    }
+  }, [tableToken]);
+
+  const fetchExistingCustomers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('customer_name')
+        .eq('table_token', tableToken);
+
+      if (error) throw error;
+
+      // Remove duplicates and empty names
+      const uniqueCustomers = Array.from(
+        new Set(data.map(order => order.customer_name).filter(name => name))
+      );
+      
+      setExistingCustomers(uniqueCustomers);
+    } catch (error) {
+      console.error("Error fetching existing customers:", error);
+    }
+  };
 
   const calculateTotal = () => {
     return cart.reduce((total, item) => {
@@ -24,15 +56,25 @@ export const CartModal = ({ cart, onRemoveItem, onClose, onConfirmOrder }: CartM
     }, 0);
   };
 
-  const handleConfirmOrder = () => {
-    if (!customerName || !phone) {
-      setErrorMessage("Por favor, preencha seu nome e telefone.");
+  const handleConfirmOrder = async () => {
+    if (!customerName) {
+      setErrorMessage("Por favor, preencha seu nome.");
       return;
     }
-
-    alert(`Customer Name no CartModal: ${customerName}`); // Exibe o customerName
+  
+    // Sempre cria um novo pedido, mesmo que seja o mesmo cliente
     onConfirmOrder(customerName, phone, cart);
     onClose();
+  };
+
+  const handleUseExistingCustomer = () => {
+    setShowCustomerList(true);
+  };
+
+  const handleSelectCustomer = (name: string) => {
+    setCustomerName(name);
+    setShowCustomerList(false);
+    setIsUpdatingOrder(true);
   };
 
   return (
@@ -85,20 +127,38 @@ export const CartModal = ({ cart, onRemoveItem, onClose, onConfirmOrder }: CartM
           <input
             type="text"
             value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            className="w-full p-2 border rounded-lg"
+            onChange={(e) => {
+              setCustomerName(e.target.value);
+              setIsUpdatingOrder(false);
+            }}
+            className="w-full p-2 border rounded-lg mb-2"
             placeholder="Seu nome"
           />
-        </div>
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Digitar seu número</label>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="w-full p-2 border rounded-lg"
-            placeholder="Seu telefone"
-          />
+          
+          {existingCustomers.length > 0 && !showCustomerList && (
+            <Button
+              variant="outline"
+              className="w-full mb-2"
+              onClick={handleUseExistingCustomer}
+            >
+              Usar Nome Cadastrado
+            </Button>
+          )}
+
+          {showCustomerList && (
+            <div className="border rounded-lg p-2 max-h-40 overflow-y-auto">
+              <p className="text-sm font-medium mb-2">Clientes nesta mesa:</p>
+              {existingCustomers.map((name) => (
+                <div 
+                  key={name}
+                  className="p-2 hover:bg-gray-100 cursor-pointer rounded"
+                  onClick={() => handleSelectCustomer(name)}
+                >
+                  {name}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {errorMessage && (
@@ -113,7 +173,7 @@ export const CartModal = ({ cart, onRemoveItem, onClose, onConfirmOrder }: CartM
           }}
           onClick={handleConfirmOrder}
         >
-          Confirmar Pedido
+          {isUpdatingOrder ? 'Adicionar ao Pedido Existente' : 'Confirmar Pedido'}
         </Button>
       </div>
     </div>

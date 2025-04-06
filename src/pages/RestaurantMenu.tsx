@@ -395,16 +395,12 @@ const checkTableOrders = async (token: string) => {
           onRemoveItem={handleRemoveItem}
           onClose={() => setShowCartModal(false)}
           onConfirmOrder={(name, phone) => {
-            // Aqui você pode processar os dados do pedido (ex: enviar para o backend)
             setCustomerName(name);
             console.log("Pedido confirmado:", { name, phone });
-
-            // Fecha o modal do carrinho
             setShowCartModal(false);
-
-            // Abre o modal do TableOrder
             setShowTableOrderModal(true);
           }}
+          tableToken={tableToken} // Adicione esta linha
         />
       )}
 

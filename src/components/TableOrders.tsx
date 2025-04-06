@@ -27,6 +27,13 @@ interface TableOrdersProps {
     restaurantId: number;
 }
 
+interface GroupedOrder {
+  customer_name: string;
+  items: MenuItem[];
+  status: string;
+  orderIds: string[];
+}
+
 export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId, onTableFinalized }: TableOrdersProps) => {
     // Usar uma chave de dependência para forçar a rerendenização
     const [realtimeKey, setRealtimeKey] = useState(Date.now());
@@ -46,8 +53,16 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
   }, [localOrders]);
 
   const handleFinalizeTable = (tableNumber) => {
-    const tableOrders = groupedOrders[tableNumber];
-    setSelectedTable({ tableNumber, orders: tableOrders });
+    const table = tables.find(t => t.tableNumber === parseInt(tableNumber));
+    if (!table) return;
+  
+    // Obter todos os pedidos da mesa (não agrupados)
+    const tableOrders = orders.filter(order => order.table_token === table.token);
+    
+    setSelectedTable({ 
+      tableNumber, 
+      orders: tableOrders // Agora é um array de pedidos
+    });
     setIsFinalizeModalOpen(true);
   };
 
@@ -93,41 +108,45 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
 
   // Função para agrupar os pedidos por mesa
   const groupOrdersByTable = (orders: any[]) => {
-    const groupedOrders: { [key: string]: any[] } = {};
-
+    const groupedByTable: { [key: string]: { [key: string]: GroupedOrder } } = {};
+  
     orders.forEach((order) => {
       const table = localTables.find((table) => table.token === order.table_token);
       if (table) {
-        const tableNumber = table.tableNumber;
-        if (!groupedOrders[tableNumber]) {
-          groupedOrders[tableNumber] = [];
+        const tableNumber = table.tableNumber.toString();
+        const customerName = order.customer_name;
+        
+        if (!groupedByTable[tableNumber]) {
+          groupedByTable[tableNumber] = {};
         }
-        groupedOrders[tableNumber].push(order);
+        
+        if (!groupedByTable[tableNumber][customerName]) {
+          groupedByTable[tableNumber][customerName] = {
+            customer_name: customerName,
+            items: [],
+            status: order.status,
+            orderIds: []
+          };
+        }
+        
+        const items = Array.isArray(order.items) ? order.items : JSON.parse(order.items);
+        groupedByTable[tableNumber][customerName].items.push(...items);
+        groupedByTable[tableNumber][customerName].orderIds.push(order.id);
+        
+        // Mantém o status mais recente se houver múltiplos pedidos
+        groupedByTable[tableNumber][customerName].status = order.status;
       }
     });
-
-    return groupedOrders;
+  
+    return groupedByTable;
   };
 
   // Função para calcular o total dos pedidos de uma mesa
-  const calculateTableTotal = (orders: any[]) => {
-    return orders.reduce((total, order) => {
-      try {
-        // Verifique se order.items já é um array
-        const items = Array.isArray(order.items) ? order.items : JSON.parse(order.items);
-        return (
-          total +
-          items.reduce((itemTotal, item) => {
-            if (item.is_promotional && item.promotional_price) {
-              return itemTotal + item.promotional_price;
-            }
-            return itemTotal + item.price;
-          }, 0)
-        );
-      } catch (error) {
-        console.error("Erro ao calcular total:", error);
-        return total;
-      }
+  const calculateTableTotal = (customers: { [key: string]: GroupedOrder }) => {
+    return Object.values(customers).reduce((total, customer) => {
+      return total + customer.items.reduce((sum, item) => {
+        return sum + (item.is_promotional && item.promotional_price ? item.promotional_price : item.price);
+      }, 0);
     }, 0);
   };
 
@@ -138,8 +157,9 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
     <>
       <Accordion type="single" collapsible key={realtimeKey}>
         {Object.keys(groupedOrders).map((tableNumber) => {
-          const tableOrders = groupedOrders[tableNumber];
-          const tableTotal = calculateTableTotal(tableOrders);
+          const tableCustomers = groupedOrders[tableNumber];
+          const tableTotal = calculateTableTotal(tableCustomers);
+          
           return (
             <AccordionItem key={`table-${tableNumber}-${realtimeKey}`} value={tableNumber}>
               <AccordionTrigger className="text-lg font-semibold">
@@ -148,7 +168,7 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
                       variant="outline"
                       size="sm"
                       onClick={(e) => {
-                      e.stopPropagation(); // Impede que o Accordion feche ao clicar no botão
+                      e.stopPropagation();
                       handleFinalizeTable(tableNumber);
                       }}
                   >
@@ -162,53 +182,26 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
                       <TableHead>Cliente</TableHead>
                       <TableHead>Itens</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {tableOrders.map((order) => (
-                      <TableRow key={`order-${order.id}-${realtimeKey}`}>
-                        <TableCell>{order.customer_name}</TableCell>
+                    {Object.values(tableCustomers).map((customer) => (
+                      <TableRow key={`customer-${customer.customer_name}-${realtimeKey}`}>
+                        <TableCell>{customer.customer_name}</TableCell>
                         <TableCell>
-                          {(() => {
-                            try {
-                              // Verifique se order.items já é um array
-                              const items = Array.isArray(order.items) ? order.items : JSON.parse(order.items);
-                              return items.map((item: MenuItem, index: number) => (
-                                <div key={`item-${index}-${realtimeKey}`}>
-                                  {item.name} - {new Intl.NumberFormat("pt-BR", {
-                                    style: "currency",
-                                    currency: "BRL",
-                                  }).format(item.is_promotional && item.promotional_price ? item.promotional_price : item.price)}
-                                </div>
-                              ));
-                            } catch (error) {
-                              console.error("Erro ao parsear itens:", error);
-                              return <div>Erro ao carregar itens</div>;
-                            }
-                          })()}
+                          {customer.items.map((item, index) => (
+                            <div key={`item-${index}-${realtimeKey}`}>
+                              {item.name} - {new Intl.NumberFormat("pt-BR", {
+                                style: "currency",
+                                currency: "BRL",
+                              }).format(item.is_promotional && item.promotional_price ? item.promotional_price : item.price)}
+                            </div>
+                          ))}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={order.status === 'pending' ? 'secondary' : 'default'}>
-                            {order.status === 'pending' ? 'Pendente' : 'Concluído'}
+                          <Badge variant={customer.status === 'pending' ? 'secondary' : 'outline'}>
+                            {customer.status === 'pending' ? 'Pendente' : 'Concluído'}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              onUpdateOrderStatus(order.id, 'completed');
-                              // Opcionalmente, atualize o estado local também para feedback imediato
-                              setLocalOrders(prev => 
-                                prev.map(o => o.id === order.id ? {...o, status: 'completed'} : o)
-                              );
-                              setRealtimeKey(Date.now()); // Forçar rerendenização
-                            }}
-                            disabled={order.status !== 'pending'}
-                          >
-                            Concluir Pedido
-                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
