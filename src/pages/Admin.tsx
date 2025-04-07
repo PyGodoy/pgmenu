@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -135,6 +135,47 @@ const Admin = () => {
     fetchRestaurantAndTables();
   }, [navigate, toast]);
 
+  const handleNewOrder = useCallback((payload) => {
+    setOrders(currentOrders => {
+      if (payload.eventType === 'INSERT') {
+        return [payload.new, ...currentOrders];
+      }
+      if (payload.eventType === 'UPDATE') {
+        return currentOrders.map(order => 
+          order.id === payload.new.id ? payload.new : order
+        );
+      }
+      if (payload.eventType === 'DELETE') {
+        return currentOrders.filter(order => order.id !== payload.old.id);
+      }
+      return currentOrders;
+    });
+  }, []);
+
+  // Configuração da subscription
+  useEffect(() => {
+    if (!restaurant?.id) return;
+
+    const channel = supabase
+      .channel(`restaurant-orders-${restaurant.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+          filter: `restaurant_id=eq.${restaurant.id}`
+        },
+        handleNewOrder
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [restaurant?.id, handleNewOrder]);
+
+
   const handleFinalizeTable = async (tableToken: string, onSuccess?: () => void) => {
     try {
       // 1. Deletar pedidos
@@ -186,31 +227,40 @@ const Admin = () => {
 
   useEffect(() => {
     if (!restaurant?.id) return;
-
-    // Definir corretamente a variável channel
-    const channel = supabase.channel(`restaurant-orders-${restaurant.id}`);
-
-    // Configuração do canal... (como acima)
-
-    // Configurar polling
-    const intervalId = setInterval(async () => {
-      try {
-        const { data, error } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('restaurant_id', restaurant.id);
-
-        if (error) throw error;
-        setOrders(data);
-      } catch (err) {
-        console.error('Erro ao buscar pedidos:', err);
-      }
-    }, 10000);
-
+  
+    // Configurar canal do Supabase Realtime
+    const channel = supabase
+      .channel(`restaurant-orders-${restaurant.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+          filter: `restaurant_id=eq.${restaurant.id}`
+        },
+        (payload) => {
+          // Atualização otimizada do estado
+          setOrders(current => {
+            if (payload.eventType === 'INSERT') {
+              return [payload.new, ...current];
+            }
+            if (payload.eventType === 'UPDATE') {
+              return current.map(order => 
+                order.id === payload.new.id ? payload.new : order
+              );
+            }
+            if (payload.eventType === 'DELETE') {
+              return current.filter(order => order.id !== payload.old.id);
+            }
+            return current;
+          });
+        }
+      )
+      .subscribe();
+  
     return () => {
-      // Agora ambos channel e intervalId estão definidos corretamente
       supabase.removeChannel(channel);
-      clearInterval(intervalId);
     };
   }, [restaurant?.id]);
 
@@ -906,10 +956,12 @@ const Admin = () => {
             <>
               <Card className="bg-background shadow-sm mt-6">
 
-                <OrdersCard
-                  restaurantId={restaurant?.id}
-                  tables={tables}
-                />
+              <OrdersCard
+                restaurantId={restaurant?.id}
+                tables={tables}
+                orders={orders}
+                onOrderComplete={handleUpdateOrderStatus}
+              />
 
               </Card>
 

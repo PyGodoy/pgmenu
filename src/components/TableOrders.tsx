@@ -213,73 +213,82 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
             const isExpanded = expandedTables.includes(tableNumber);
 
             return (
-              <Card
-                key={`table-${tableNumber}-${realtimeKey}`}
-                className={`overflow-hidden border-l-4 transition-all ${isPending ? 'border-l-amber-500' : 'border-l-emerald-500'
-                  } hover:shadow-md`}
-              >
-                <div className="p-4 flex justify-between items-center border-b bg-gray-50">
-                  <div className="flex items-center gap-2">
-                    <div className="text-xl font-bold">Mesa {tableNumber}</div>
-                    {isPending ? (
-                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                        <Clock size={14} className="mr-1" /> Pendente
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                        <CheckCircle size={14} className="mr-1" /> Atendido
-                      </Badge>
-                    )}
+              <div key={`table-wrapper-${tableNumber}-${realtimeKey}`} className="h-auto">
+                <Card
+                  key={`table-${tableNumber}-${realtimeKey}`}
+                  className={`border-l-4 transition-all ${isPending ? 'border-l-amber-500' : 'border-l-emerald-500'
+                    } hover:shadow-md h-auto`}
+                  style={{ height: 'auto', alignSelf: 'flex-start' }}
+                >
+                  {/* Cabeçalho da mesa */}
+                  <div className="p-4 flex justify-between items-center border-b bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <div className="text-xl font-bold">Mesa {tableNumber}</div>
+                      {isPending ? (
+                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                          <Clock size={14} className="mr-1" /> Pendente
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                          <CheckCircle size={14} className="mr-1" /> Atendido
+                        </Badge>
+                      )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                      onClick={() => handleFinalizeTable(tableNumber)}
+                    >
+                      Finalizar
+                    </Button>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-                    onClick={() => handleFinalizeTable(tableNumber)}
-                  >
-                    Finalizar
-                  </Button>
-                </div>
 
-                <div className="p-4 grid grid-cols-2 gap-4 bg-white">
-                  <div className="flex items-center">
-                    <Users size={16} className="text-gray-500 mr-2" />
-                    <span className="text-sm text-gray-700">
-                      {customerCount} {customerCount === 1 ? 'cliente' : 'clientes'}
-                    </span>
+                  {/* Informações resumidas */}
+                  <div className="p-4 grid grid-cols-2 gap-4 bg-white">
+                    <div className="flex items-center">
+                      <Users size={16} className="text-gray-500 mr-2" />
+                      <span className="text-sm text-gray-700">
+                        {customerCount} {customerCount === 1 ? 'cliente' : 'clientes'}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <CreditCard size={16} className="text-gray-500 mr-2" />
+                      <span className="text-sm font-medium text-gray-700">
+                        {formatCurrency(tableTotal)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <CreditCard size={16} className="text-gray-500 mr-2" />
-                    <span className="text-sm font-medium text-gray-700">
-                      {formatCurrency(tableTotal)}
-                    </span>
-                  </div>
-                </div>
 
-                <div className="border-t p-2 bg-gray-50 text-center">
-                  <button
-                    onClick={() => toggleExpandedTable(tableNumber)}
-                    className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-                  >
-                    {isExpanded ? "Ocultar detalhes" : "Ver detalhes"}
-                  </button>
-                </div>
-                <div className="p-4 border-t max-h-[300px] overflow-y-auto">
+                  {/* Botão Ver/Ocultar detalhes */}
+                  <div className="border-t p-2 bg-gray-50 text-center">
+                    <button
+                      onClick={() => toggleExpandedTable(tableNumber)}
+                      className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                    >
+                      {isExpanded ? "Ocultar detalhes" : "Ver detalhes"}
+                    </button>
+                  </div>
+
+                  {/* Conteúdo detalhado (visível apenas quando expandido) */}
                   {isExpanded && (
-                    <div className="p-4 border-t">
+                    <div 
+                      className="border-t overflow-y-auto"
+                      style={{ maxHeight: '300px' }}
+                    >
                       {Object.values(tableCustomers).map((customer, idx) => (
                         <div
                           key={`customer-${customer.customer_name}-${realtimeKey}`}
-                          className={`${idx > 0 ? 'border-t pt-3 mt-3' : ''}`}
+                          className={`p-4 ${idx > 0 ? 'border-t' : ''}`}
                         >
                           <div className="flex justify-between items-center mb-2">
                             <div className="font-medium">{customer.customer_name}</div>
                             <Badge
                               variant={customer.status === 'pending' ? 'secondary' : 'outline'}
                               className={`${customer.status === 'pending'
-                                  ? 'bg-amber-100 text-amber-800 border-none'
-                                  : 'bg-emerald-100 text-emerald-800 border-none'
-                                }`}
+                                ? 'bg-amber-100 text-amber-800 border-none'
+                                : 'bg-emerald-100 text-emerald-800 border-none'
+                              }`}
                             >
                               {customer.status === 'pending' ? 'Pendente' : 'Concluído'}
                             </Badge>
@@ -303,7 +312,6 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
                                     {formatCurrency(price * item.quantity)}
                                   </span>
                                 </div>
-
                               );
                             })}
                           </div>
@@ -311,8 +319,8 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
                       ))}
                     </div>
                   )}
-                </div>
-              </Card>
+                </Card>
+              </div>
             );
           })}
         </div>
