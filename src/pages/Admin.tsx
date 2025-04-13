@@ -60,7 +60,10 @@ const Admin = () => {
   const [tables, setTables] = useState<{ id: string; tableNumber: number; token: string }[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [activeSection, setActiveSection] = useState("produtos");
+  const [selectedTables, setSelectedTables] = useState<number[]>([]);
+  const [selectMode, setSelectMode] = useState(false);
 
+  
   useEffect(() => {
     const fetchRestaurantAndTables = async () => {
       try {
@@ -141,7 +144,7 @@ const Admin = () => {
         return [payload.new, ...currentOrders];
       }
       if (payload.eventType === 'UPDATE') {
-        return currentOrders.map(order => 
+        return currentOrders.map(order =>
           order.id === payload.new.id ? payload.new : order
         );
       }
@@ -227,7 +230,7 @@ const Admin = () => {
 
   useEffect(() => {
     if (!restaurant?.id) return;
-  
+
     // Configurar canal do Supabase Realtime
     const channel = supabase
       .channel(`restaurant-orders-${restaurant.id}`)
@@ -246,7 +249,7 @@ const Admin = () => {
               return [payload.new, ...current];
             }
             if (payload.eventType === 'UPDATE') {
-              return current.map(order => 
+              return current.map(order =>
                 order.id === payload.new.id ? payload.new : order
               );
             }
@@ -258,7 +261,7 @@ const Admin = () => {
         }
       )
       .subscribe();
-  
+
     return () => {
       supabase.removeChannel(channel);
     };
@@ -639,30 +642,238 @@ const Admin = () => {
   };
 
   const generateTableQRCode = (tableNumber: number) => {
-    const id = uuidv4(); // Gera um ID único
-    const token = uuidv4(); // Gera um token único
+    const id = uuidv4();
+    const token = uuidv4();
     const newTable = {
       id: id,
       tableNumber: tableNumber,
       token: token,
     };
-
-    // Atualiza o estado local
+  
     setTables((prevTables) => [...prevTables, newTable]);
-
-    // Salva no banco de dados
     saveTableToDatabase(newTable);
   };
+  
+  // Função para baixar QR Code (deve estar no nível do componente)
+  const handleDownloadQRCode = (tableNumber: number, token: string) => {
+    const canvas = document.createElement('canvas');
+    const qrCodeElement = document.querySelector(`#qr-code-table-${tableNumber}`) as HTMLElement;
+    
+    if (!qrCodeElement) return;
+  
+    const svg = qrCodeElement.querySelector('svg');
+    if (!svg) return;
+  
+    const svgData = new XMLSerializer().serializeToString(svg);
+    
+    // Aumentamos o tamanho do canvas para acomodar o texto abaixo do QR code
+    const canvasWidth = 300;
+    const canvasHeight = 350; // Altura maior para acomodar o texto
+    
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    const ctx = canvas.getContext('2d');
+  
+    if (!ctx) return;
+  
+    const img = new Image();
+    img.onload = () => {
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+      
+      // Desenha o QR code centralizado
+      ctx.drawImage(img, 0, 0, canvasWidth, 300);
+      
+      // Adiciona o texto abaixo (não sobre) o QR code
+      ctx.fillStyle = 'black';
+      ctx.font = 'bold 24px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Mesa ${tableNumber}`, canvasWidth / 2, 330);
+  
+      const pngFile = canvas.toDataURL('image/png');
+      const downloadLink = document.createElement('a');
+      downloadLink.download = `QRCode-Mesa-${tableNumber}.png`;
+      downloadLink.href = pngFile;
+      downloadLink.click();
+    };
+  
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+  };
+  
+  // Função melhorada para impressão de QR Code
+  const handlePrintQRCode = (tableNumber: number) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+  
+    const qrCodeElement = document.querySelector(`#qr-code-table-${tableNumber}`)?.innerHTML;
+    if (!qrCodeElement) return;
+  
+    printWindow.document.open();
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>QR Code Mesa ${tableNumber}</title>
+          <style>
+            body { 
+              display: flex; 
+              justify-content: center; 
+              align-items: center; 
+              height: 100vh; 
+              margin: 0; 
+              flex-direction: column; 
+              font-family: Arial, sans-serif;
+            }
+            .qr-container {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              padding: 20px;
+              border: 1px dashed #ccc;
+              border-radius: 8px;
+              margin-bottom: 20px;
+            }
+            .mesa-title {
+              font-size: 24px;
+              font-weight: bold;
+              margin-top: 15px;
+              margin-bottom: 0;
+            }
+            .qr-code {
+              width: 200px;
+              height: 200px;
+            }
+            @media print { 
+              body { height: auto; } 
+              .qr-container { break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="qr-container">
+            <div class="qr-code">${qrCodeElement}</div>
+            <p class="mesa-title">Mesa ${tableNumber}</p>
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                window.close();
+              }, 500);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+  
+  // Nova função para impressão de múltiplos QR codes
+  const handlePrintMultipleQRCodes = (selectedTables: number[]) => {
+    if (selectedTables.length === 0) return;
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
+    printWindow.document.open();
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>QR Codes das Mesas</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif;
+              margin: 20px;
+            }
+            .print-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 20px;
+            }
+            .qr-container {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              padding: 20px;
+              border: 1px dashed #ccc;
+              border-radius: 8px;
+              page-break-inside: avoid;
+            }
+            .mesa-title {
+              font-size: 24px;
+              font-weight: bold;
+              margin-top: 15px;
+              margin-bottom: 5px;
+            }
+            .qr-code {
+              width: 200px;
+              height: 200px;
+            }
+            @media print { 
+              body { margin: 0; } 
+              .print-grid { grid-template-columns: repeat(2, 1fr); }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-grid">
+    `);
+    
+    selectedTables.forEach(tableNumber => {
+      const qrCodeElement = document.querySelector(`#qr-code-table-${tableNumber}`)?.innerHTML;
+      if (qrCodeElement) {
+        printWindow.document.write(`
+          <div class="qr-container">
+            <div class="qr-code">${qrCodeElement}</div>
+            <p class="mesa-title">Mesa ${tableNumber}</p>
+          </div>
+        `);
+      }
+    });
+    
+    printWindow.document.write(`
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                window.close();
+              }, 500);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
+const toggleSelectTable = (tableNumber: number) => {
+  setSelectedTables(prev =>
+    prev.includes(tableNumber)
+      ? prev.filter(t => t !== tableNumber)
+      : [...prev, tableNumber]
+  );
+};
+
+const toggleSelectMode = () => {
+  setSelectMode(prev => {
+    if (prev) setSelectedTables([]); // limpa seleção se desativar o modo
+    return !prev;
+  });
+};
+
+  
+  // Função para salvar mesa no banco de dados
   const saveTableToDatabase = async (table: { id: string; tableNumber: number; token: string }) => {
     try {
       const restaurantId = restaurant?.id;
-
+  
       if (!restaurantId) {
         console.error("Restaurante não encontrado. Não foi possível salvar a mesa.");
         return;
       }
-
+  
       const { error } = await supabase
         .from('tables')
         .insert([
@@ -673,9 +884,9 @@ const Admin = () => {
             restaurant_id: restaurantId,
           },
         ]);
-
+  
       if (error) throw error;
-
+  
       toast({
         title: "Mesa adicionada com sucesso!",
       });
@@ -918,8 +1129,9 @@ const Admin = () => {
           {/* Seção de Mesas - QR Code */}
           {activeSection === "mesas" && (
             <Card className="bg-background shadow-sm mt-6">
-              <CardHeader className="flex flex-col sm:flex-row items-center justify-between pb-3 sm:pb-4">
-                <h2 className="text-xl sm:text-2xl font-semibold text-text mb-3 sm:mb-0">Mesas</h2>
+            <CardHeader className="flex flex-col sm:flex-row items-center justify-between pb-3 sm:pb-4">
+              <h2 className="text-xl sm:text-2xl font-semibold text-text mb-3 sm:mb-0">Mesas</h2>
+              <div className="flex gap-2 w-full sm:w-auto">
                 <Button
                   onClick={() => {
                     const tableNumber = tables.length + 1;
@@ -930,25 +1142,85 @@ const Admin = () => {
                 >
                   Adicionar Mesa
                 </Button>
-              </CardHeader>
-              <CardContent className="px-2 sm:px-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {[...tables].sort((a, b) => a.tableNumber - b.tableNumber).map((table) => (
-                    <div
-                      key={table.id}
-                      className="flex flex-col items-center justify-center p-4 bg-white rounded-lg shadow-md"
-                    >
+                <Button
+                  onClick={toggleSelectMode}
+                  variant={selectMode ? "default" : "outline"}
+                  className="w-full sm:w-auto"
+                >
+                  {selectMode ? "Cancelar Seleção" : "Selecionar Múltiplos"}
+                </Button>
+                {selectMode && selectedTables.length > 0 && (
+                  <Button
+                    onClick={() => handlePrintMultipleQRCodes(selectedTables)}
+                    className="w-full sm:w-auto"
+                    style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
+                  >
+                    Imprimir {selectedTables.length} Selecionados
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="px-2 sm:px-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {[...tables].sort((a, b) => a.tableNumber - b.tableNumber).map((table) => (
+                  <div
+                    key={table.id}
+                    onClick={() => selectMode && toggleSelectTable(table.tableNumber)}
+                    className={`flex flex-col items-center justify-center p-4 bg-white rounded-lg shadow-md relative group
+                      ${selectMode ? 'cursor-pointer hover:bg-gray-50' : ''}
+                      ${selectMode && selectedTables.includes(table.tableNumber) ? 'ring-2 ring-primary bg-primary/10' : ''}
+                    `}
+                  >
+                    {selectMode && (
+                      <div className="absolute top-2 right-2">
+                        <input 
+                          type="checkbox" 
+                          checked={selectedTables.includes(table.tableNumber)}
+                          readOnly
+                          className="h-5 w-5 accent-primary"
+                        />
+                      </div>
+                    )}
+                    <div id={`qr-code-table-${table.tableNumber}`}>
                       <QRCodeSVG
                         value={`https://c471-170-239-226-180.ngrok-free.app/${restaurant?.slug || 'seu-restaurante'}/${table.token}`}
                         size={160}
                       />
-                      <p className="mt-3 text-sm font-semibold text-text">Mesa {table.tableNumber}</p>
                     </div>
-                  ))}
-                </div>
-
-              </CardContent>
-            </Card>
+                    <p className="mt-3 text-base font-bold text-text">Mesa {table.tableNumber}</p>
+      
+                    {/* Botões de ação */}
+                    {!selectMode && (
+                      <div className="flex gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownloadQRCode(table.tableNumber, table.token);
+                          }}
+                        >
+                          Baixar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePrintQRCode(table.tableNumber);
+                          }}
+                        >
+                          Imprimir
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
           )}
 
           {/* Seção de Ordem de Pedidos */}
@@ -956,12 +1228,12 @@ const Admin = () => {
             <>
               <Card className="bg-background shadow-sm mt-6">
 
-              <OrdersCard
-                restaurantId={restaurant?.id}
-                tables={tables}
-                orders={orders}
-                onOrderComplete={handleUpdateOrderStatus}
-              />
+                <OrdersCard
+                  restaurantId={restaurant?.id}
+                  tables={tables}
+                  orders={orders}
+                  onOrderComplete={handleUpdateOrderStatus}
+                />
 
               </Card>
 
