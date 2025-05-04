@@ -36,7 +36,13 @@ interface GroupedOrder {
   orderIds: string[];
 }
 
-export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId, onTableFinalized }: TableOrdersProps) => {
+export const TableOrders = ({
+  orders,
+  tables,
+  onUpdateOrderStatus,
+  restaurantId,
+  onTableFinalized,
+}: TableOrdersProps) => {
   const [realtimeKey, setRealtimeKey] = useState(Date.now());
   const [localOrders, setLocalOrders] = useState(orders);
   const [localTables, setLocalTables] = useState(tables);
@@ -51,15 +57,17 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
   }, [orders, tables]);
 
   const handleFinalizeTable = (tableNumber) => {
-    const table = tables.find(t => t.tableNumber === parseInt(tableNumber));
+    const table = tables.find((t) => t.tableNumber === parseInt(tableNumber));
     if (!table) return;
 
     // Obter todos os pedidos da mesa
-    const tableOrders = orders.filter(order => order.table_token === table.token);
+    const tableOrders = orders.filter(
+      (order) => order.table_token === table.token
+    );
 
     setSelectedTable({
       tableNumber,
-      orders: tableOrders
+      orders: tableOrders,
     });
     setIsFinalizeModalOpen(true);
   };
@@ -71,7 +79,9 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
 
   const handleConfirmFinalization = async (tableNumber) => {
     try {
-      const tableToFinalize = localTables.find(t => t.tableNumber === parseInt(tableNumber));
+      const tableToFinalize = localTables.find(
+        (t) => t.tableNumber === parseInt(tableNumber)
+      );
 
       if (!tableToFinalize) {
         console.error("Mesa não encontrada");
@@ -79,15 +89,15 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
       }
 
       const { error: deleteOrdersError } = await supabase
-        .from('orders')
+        .from("orders")
         .delete()
-        .eq('table_token', tableToFinalize.token);
+        .eq("table_token", tableToFinalize.token);
 
       if (deleteOrdersError) throw deleteOrdersError;
 
-      setLocalOrders(prev => prev.filter(order =>
-        order.table_token !== tableToFinalize.token
-      ));
+      setLocalOrders((prev) =>
+        prev.filter((order) => order.table_token !== tableToFinalize.token)
+      );
 
       setRealtimeKey(Date.now());
 
@@ -104,10 +114,13 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
 
   // Função para agrupar os pedidos por mesa
   const groupOrdersByTable = (orders: any[]) => {
-    const groupedByTable: { [key: string]: { [key: string]: GroupedOrder } } = {};
+    const groupedByTable: { [key: string]: { [key: string]: GroupedOrder } } =
+      {};
 
     orders.forEach((order) => {
-      const table = localTables.find((table) => table.token === order.table_token);
+      const table = localTables.find(
+        (table) => table.token === order.table_token
+      );
       if (table) {
         const tableNumber = table.tableNumber.toString();
         const customerName = order.customer_name;
@@ -121,11 +134,13 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
             customer_name: customerName,
             items: [],
             status: order.status,
-            orderIds: []
+            orderIds: [],
           };
         }
 
-        const items = Array.isArray(order.items) ? order.items : JSON.parse(order.items);
+        const items = Array.isArray(order.items)
+          ? order.items
+          : JSON.parse(order.items);
         groupedByTable[tableNumber][customerName].items.push(...items);
         groupedByTable[tableNumber][customerName].orderIds.push(order.id);
 
@@ -140,9 +155,17 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
   // Função para calcular o total dos pedidos de uma mesa
   const calculateTableTotal = (customers: { [key: string]: GroupedOrder }) => {
     return Object.values(customers).reduce((total, customer) => {
-      return total + customer.items.reduce((sum, item) => {
-        return sum + (item.is_promotional && item.promotional_price ? item.promotional_price : item.price);
-      }, 0);
+      return (
+        total +
+        customer.items.reduce((sum, item) => {
+          return (
+            sum +
+            (item.is_promotional && item.promotional_price
+              ? item.promotional_price
+              : item.price)
+          );
+        }, 0)
+      );
     }, 0);
   };
 
@@ -166,7 +189,9 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
   const hasActivePendingOrders = (tableNumber: string) => {
     const customers = groupedOrders[tableNumber];
     if (!customers) return false;
-    return Object.values(customers).some(customer => customer.status === 'pending');
+    return Object.values(customers).some(
+      (customer) => customer.status === "pending"
+    );
   };
 
   // Calcula quantos clientes há na mesa
@@ -177,17 +202,17 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
 
   // Formata o valor monetário
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
     }).format(value);
   };
 
   // Função para alternar a tabela expandida
   const toggleExpandedTable = (tableNumber: string) => {
-    setExpandedTables(prev =>
+    setExpandedTables((prev) =>
       prev.includes(tableNumber)
-        ? prev.filter(t => t !== tableNumber)
+        ? prev.filter((t) => t !== tableNumber)
         : [...prev, tableNumber]
     );
   };
@@ -200,7 +225,9 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
         <Card className="bg-gray-50">
           <CardContent className="flex flex-col items-center justify-center p-8">
             <Coffee size={48} className="text-gray-400 mb-4" />
-            <p className="text-gray-500 text-lg">Não há mesas ativas no momento</p>
+            <p className="text-gray-500 text-lg">
+              Não há mesas ativas no momento
+            </p>
           </CardContent>
         </Card>
       ) : (
@@ -213,23 +240,35 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
             const isExpanded = expandedTables.includes(tableNumber);
 
             return (
-              <div key={`table-wrapper-${tableNumber}-${realtimeKey}`} className="h-auto">
+              <div
+                key={`table-wrapper-${tableNumber}-${realtimeKey}`}
+                className="h-auto"
+              >
                 <Card
                   key={`table-${tableNumber}-${realtimeKey}`}
-                  className={`border-l-4 transition-all ${isPending ? 'border-l-amber-500' : 'border-l-emerald-500'
-                    } hover:shadow-md h-auto`}
-                  style={{ height: 'auto', alignSelf: 'flex-start' }}
+                  className={`border-l-4 transition-all ${
+                    isPending ? "border-l-amber-500" : "border-l-emerald-500"
+                  } hover:shadow-md h-auto`}
+                  style={{ height: "auto", alignSelf: "flex-start" }}
                 >
                   {/* Cabeçalho da mesa */}
                   <div className="p-4 flex justify-between items-center border-b bg-gray-50">
                     <div className="flex items-center gap-2">
-                      <div className="text-xl font-bold">Mesa {tableNumber}</div>
+                      <div className="text-xl font-bold">
+                        Mesa {tableNumber}
+                      </div>
                       {isPending ? (
-                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                        <Badge
+                          variant="outline"
+                          className="bg-amber-50 text-amber-700 border-amber-200"
+                        >
                           <Clock size={14} className="mr-1" /> Pendente
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                        <Badge
+                          variant="outline"
+                          className="bg-emerald-50 text-emerald-700 border-emerald-200"
+                        >
                           <CheckCircle size={14} className="mr-1" /> Atendido
                         </Badge>
                       )}
@@ -249,7 +288,8 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
                     <div className="flex items-center">
                       <Users size={16} className="text-gray-500 mr-2" />
                       <span className="text-sm text-gray-700">
-                        {customerCount} {customerCount === 1 ? 'cliente' : 'clientes'}
+                        {customerCount}{" "}
+                        {customerCount === 1 ? "cliente" : "clientes"}
                       </span>
                     </div>
                     <div className="flex items-center">
@@ -272,41 +312,55 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
 
                   {/* Conteúdo detalhado (visível apenas quando expandido) */}
                   {isExpanded && (
-                    <div 
+                    <div
                       className="border-t overflow-y-auto"
-                      style={{ maxHeight: '300px' }}
+                      style={{ maxHeight: "300px" }}
                     >
                       {Object.values(tableCustomers).map((customer, idx) => (
                         <div
                           key={`customer-${customer.customer_name}-${realtimeKey}`}
-                          className={`p-4 ${idx > 0 ? 'border-t' : ''}`}
+                          className={`p-4 ${idx > 0 ? "border-t" : ""}`}
                         >
                           <div className="flex justify-between items-center mb-2">
-                            <div className="font-medium">{customer.customer_name}</div>
+                            <div className="font-medium">
+                              {customer.customer_name}
+                            </div>
                             <Badge
-                              variant={customer.status === 'pending' ? 'secondary' : 'outline'}
-                              className={`${customer.status === 'pending'
-                                ? 'bg-amber-100 text-amber-800 border-none'
-                                : 'bg-emerald-100 text-emerald-800 border-none'
+                              variant={
+                                customer.status === "pending"
+                                  ? "secondary"
+                                  : "outline"
+                              }
+                              className={`${
+                                customer.status === "pending"
+                                  ? "bg-amber-100 text-amber-800 border-none"
+                                  : "bg-emerald-100 text-emerald-800 border-none"
                               }`}
                             >
-                              {customer.status === 'pending' ? 'Pendente' : 'Concluído'}
+                              {customer.status === "pending"
+                                ? "Pendente"
+                                : "Concluído"}
                             </Badge>
                           </div>
 
                           <div className="text-sm space-y-2">
                             {groupItems(customer.items).map((item, index) => {
-                              const price = item.is_promotional && item.promotional_price
-                                ? item.promotional_price
-                                : item.price;
+                              const price =
+                                item.is_promotional && item.promotional_price
+                                  ? item.promotional_price
+                                  : item.price;
                               return (
                                 <div
                                   key={`item-${index}-${realtimeKey}`}
                                   className="flex justify-between items-start text-gray-700"
                                 >
                                   <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 max-w-[70%]">
-                                    <span className="font-medium break-words">{item.name}</span>
-                                    <span className="text-gray-500 text-xs">x{item.quantity}</span>
+                                    <span className="font-medium break-words">
+                                      {item.name}
+                                    </span>
+                                    <span className="text-gray-500 text-xs">
+                                      x{item.quantity}
+                                    </span>
                                   </div>
                                   <span className="font-medium whitespace-nowrap">
                                     {formatCurrency(price * item.quantity)}
@@ -332,7 +386,9 @@ export const TableOrders = ({ orders, tables, onUpdateOrderStatus, restaurantId,
           isOpen={isFinalizeModalOpen}
           onClose={handleCloseModal}
           table={selectedTable}
-          onConfirmFinalization={() => handleConfirmFinalization(selectedTable.tableNumber)}
+          onConfirmFinalization={() =>
+            handleConfirmFinalization(selectedTable.tableNumber)
+          }
         />
       )}
     </div>
