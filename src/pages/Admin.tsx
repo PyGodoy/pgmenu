@@ -642,6 +642,16 @@ const Admin = () => {
   };
 
   const generateTableQRCode = (tableNumber: number) => {
+    // Verificar se o restaurante está carregado
+    if (!restaurant?.id) {
+      toast({
+        title: "Erro",
+        description: "Aguarde o carregamento dos dados do restaurante.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const id = uuidv4();
     const token = uuidv4();
     const newTable = {
@@ -649,7 +659,7 @@ const Admin = () => {
       tableNumber: tableNumber,
       token: token,
     };
-  
+
     setTables((prevTables) => [...prevTables, newTable]);
     saveTableToDatabase(newTable);
   };
@@ -862,7 +872,6 @@ const toggleSelectMode = () => {
     return !prev;
   });
 };
-
   
   // Função para salvar mesa no banco de dados
   const saveTableToDatabase = async (table: { id: string; tableNumber: number; token: string }) => {
@@ -1183,7 +1192,7 @@ const toggleSelectMode = () => {
                     )}
                     <div id={`qr-code-table-${table.tableNumber}`}>
                       <QRCodeSVG
-                        value={`https://c471-170-239-226-180.ngrok-free.app/${restaurant?.slug || 'seu-restaurante'}/${table.token}`}
+                        value={`https://pgmenu.com.br/${restaurant?.slug || 'seu-restaurante'}/${table.token}`}
                         size={160}
                       />
                     </div>
