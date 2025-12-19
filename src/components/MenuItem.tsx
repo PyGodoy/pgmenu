@@ -1,26 +1,27 @@
 import { useState } from "react";
 import { Card, CardContent } from "./ui/card";
 import type { MenuItem as MenuItemType } from "@/types";
-import clsx from "clsx";
+import { Button } from "./ui/button";
+import { ShoppingCart } from "lucide-react"; // Importe o ícone de carrinho
 
 interface MenuItemProps extends Omit<MenuItemType, 'id' | 'category_id' | 'created_at' | 'updated_at' | 'dietary_info'> {
   is_promotional?: boolean;
   promotional_price?: number;
+  onAddToCart?: () => void;
+  showAddButton?: boolean;
 }
 
-export const MenuItem = ({ name, description, price, image_url, is_promotional, promotional_price }: MenuItemProps) => {
-  const [expanded, setExpanded] = useState(false); // Estado para controlar a expansão
+export const MenuItem = ({ name, description, price, image_url, is_promotional, promotional_price, onAddToCart, showAddButton }: MenuItemProps) => {
+  const [expanded, setExpanded] = useState(false);
 
-  // Verifica se o item tem uma imagem
   const hasImage = !!image_url;
 
   return (
     <Card 
       className="group menu-item overflow-hidden hover:shadow-lg transition-shadow duration-300"
-      style={{ backgroundColor: 'var(--background)', color: 'var(--text)' }} // Aplica as cores personalizadas
+      style={{ backgroundColor: 'var(--background)', color: 'var(--text)' }}
     >
       <CardContent className="p-0">
-        {/* Renderiza o espaço da imagem apenas se houver uma imagem */}
         {hasImage && (
           <div className="aspect-[4/3] overflow-hidden relative">
             <img
@@ -30,18 +31,13 @@ export const MenuItem = ({ name, description, price, image_url, is_promotional, 
             />
           </div>
         )}
-
-        {/* Conteúdo textual */}
         <div className={`p-4 ${!hasImage ? "pt-6" : ""}`}>
-          {/* Nome */}
           <h3 
             className="font-display text-lg font-medium mb-1"
-            style={{ color: 'var(--primary)' }} // Aplica a cor primária
+            style={{ color: 'var(--primary)' }}
           >
             {name}
           </h3>
-
-          {/* Preço */}
           <div className="font-medium whitespace-nowrap" style={{ color: 'var(--secondary)' }}>
             {is_promotional && promotional_price ? (
               <div className="flex items-center gap-2">
@@ -52,20 +48,31 @@ export const MenuItem = ({ name, description, price, image_url, is_promotional, 
               <span className="text-lg font-semibold">R${price.toFixed(2)}</span>
             )}
           </div>
-
-          {/* Descrição */}
           <p className="text-sm text-muted-foreground mt-2">
             {expanded ? description : `${description.length > 100 ? description.slice(0, 100) + '...' : description}`}
-            {description.length > 100 && ( // Mostra o botão apenas se a descrição for longa
+            {description.length > 100 && (
               <button
                 onClick={() => setExpanded(!expanded)}
                 className="text-primary hover:underline ml-1"
-                style={{ color: 'var(--primary)' }} // Aplica a cor primária
+                style={{ color: 'var(--primary)' }}
               >
                 {expanded ? "Ver menos" : "Ver mais"}
               </button>
             )}
           </p>
+          {showAddButton && (
+            <Button
+              className="w-full mt-4 flex items-center justify-center gap-2"
+              style={{ 
+                backgroundColor: 'var(--background)', 
+                color: 'var(--text)' 
+              }}
+              onClick={onAddToCart}
+            >
+              <ShoppingCart className="w-5 h-5" /> {/* Ícone de carrinho */}
+              Adicionar
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

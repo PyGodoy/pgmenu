@@ -1,11 +1,10 @@
-
 export interface MenuItem {
   id: number;
   name: string;
   description: string;
   price: number;
   promotional_price?: number;
-  is_promotional?: boolean; 
+  is_promotional?: boolean;
   image_url: string;
   category_id: number;
   dietary_info?: string[];
@@ -33,6 +32,7 @@ export interface Restaurant {
   phone: string;
   email: string;
   hours_of_operation: string;
+  stripe_account_id?: string; // ✅ ADICIONE ESTA LINHA
   social_media?: {
     facebook?: string;
     instagram?: string;
@@ -48,3 +48,13 @@ export interface Restaurant {
     layout?: "grid" | "list";
   };
 }
+
+export type Table = {
+  id: string; // Alterado de number para string
+  table_number: number;
+  token: string;
+  restaurant_id: number;
+  customer_name: string;
+  created_at?: string;
+  updated_at?: string;
+};

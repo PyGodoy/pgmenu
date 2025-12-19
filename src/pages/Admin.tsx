@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -32,9 +32,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Badge } from 'lucide-react';
-import { QRCodeGenerator } from "@/components/QrCodeGenerator"
+import { Badge } from "@/components/ui/badge";
+import { QRCodeGenerator } from "@/components/QrCodeGenerator";
 import { motion, AnimatePresence } from "framer-motion";
+import { v4 as uuidv4 } from 'uuid';
+import { QRCodeSVG } from 'qrcode.react';
+import { TableOrders } from "@/components/TableOrders";
+import Navbar from '@/components/Navbar';
+import { OrdersCard } from '@/components/OrdersCard';
 
 const Admin = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -51,47 +56,277 @@ const Admin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [openCategory, setOpenCategory] = useState<string | undefined>(undefined);
-  const [restaurant, setRestaurant] = useState(null);
+  const [restaurant, setRestaurant] = useState<any>(null);
+  const [tables, setTables] = useState<{ id: string; tableNumber: number; token: string }[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [activeSection, setActiveSection] = useState("produtos");
+  const [selectedTables, setSelectedTables] = useState<number[]>([]);
+  const [selectMode, setSelectMode] = useState(false);
+
+  
+  useEffect(() => {
+    const fetchRestaurantAndTables = async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const userId = sessionData?.session?.user?.id;
+
+        if (!userId) {
+          navigate('/login');
+          return;
+        }
+
+        // Buscar o ID do restaurante associado ao usuário logado
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('restaurant_id')
+          .eq('id', userId)
+          .single();
+
+        if (profileError || !profile?.restaurant_id) {
+          console.error("Erro ao buscar o restaurante:", profileError);
+          return;
+        }
+
+        // Buscar os dados do restaurante usando o ID correto
+        const { data: restaurantData, error: restaurantError } = await supabase
+          .from("restaurants")
+          .select("*")
+          .eq("id", profile.restaurant_id)
+          .single();
+
+        if (restaurantError) {
+          console.error("Erro ao buscar os dados do restaurante:", restaurantError);
+          return;
+        }
+
+        // Definir o restaurante no estado
+        setRestaurant(restaurantData);
+
+        // Buscar as mesas associadas a este restaurante
+        const { data: tablesData, error: tablesError } = await supabase
+          .from('tables')
+          .select('*')
+          .eq('restaurant_id', restaurantData.id);
+
+        if (tablesError) {
+          console.error("Erro ao buscar mesas:", tablesError);
+          return;
+        }
+
+        // Mapear os dados das mesas para o formato esperado pelo componente
+        const formattedTables = tablesData.map(table => ({
+          id: table.id,
+          tableNumber: table.table_number,
+          token: table.token
+        }));
+
+        // Atualizar o estado com as mesas existentes
+        setTables(formattedTables);
+
+        // Buscar os pedidos
+        fetchOrders();
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+        toast({
+          title: "Erro ao carregar dados",
+          description: "Ocorreu um erro ao buscar os dados do restaurante e mesas.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchRestaurantAndTables();
+  }, [navigate, toast]);
+
+  const handleNewOrder = useCallback((payload) => {
+    setOrders(currentOrders => {
+      if (payload.eventType === 'INSERT') {
+        return [payload.new, ...currentOrders];
+      }
+      if (payload.eventType === 'UPDATE') {
+        return currentOrders.map(order =>
+          order.id === payload.new.id ? payload.new : order
+        );
+      }
+      if (payload.eventType === 'DELETE') {
+        return currentOrders.filter(order => order.id !== payload.old.id);
+      }
+      return currentOrders;
+    });
+  }, []);
+
+  // Configuração da subscription
+  useEffect(() => {
+    if (!restaurant?.id) return;
+
+    const channel = supabase
+      .channel(`restaurant-orders-${restaurant.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+          filter: `restaurant_id=eq.${restaurant.id}`
+        },
+        handleNewOrder
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [restaurant?.id, handleNewOrder]);
+
+
+  const handleFinalizeTable = async (tableToken: string, onSuccess?: () => void) => {
+    try {
+      // 1. Deletar pedidos
+      const { data: ordersToDelete } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('table_token', tableToken);
+
+      const { error: deleteError } = await supabase
+        .from('orders')
+        .delete()
+        .eq('table_token', tableToken);
+
+      if (deleteError) throw deleteError;
+
+      // 2. Atualizar token da mesa
+      const newToken = uuidv4();
+      const { error: updateError } = await supabase
+        .from('tables')
+        .update({ token: newToken })
+        .eq('token', tableToken);
+
+      if (updateError) throw updateError;
+
+      // 3. Atualizar estado
+      setTables(prev =>
+        prev.map(t => t.token === tableToken ? { ...t, token: newToken } : t)
+      );
+
+      // 4. Notificar sucesso
+      toast({
+        title: "Mesa finalizada!",
+        description: "Pedidos removidos e mesa reiniciada.",
+      });
+
+      if (onSuccess) onSuccess();
+
+      // 5. Forçar atualização dos pedidos
+      fetchOrders();
+
+    } catch (error) {
+      console.error("Erro ao finalizar mesa:", error);
+      toast({
+        title: "Erro ao finalizar mesa",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
-    const fetchRestaurant = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.session?.user?.id;
-  
-      if (!userId) {
-        navigate('/login');
-        return;
-      }
-  
-      // Buscar o ID do restaurante associado ao usuário logado
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('restaurant_id')
-        .eq('id', userId)
-        .single();
-  
-      if (profileError || !profile?.restaurant_id) {
-        console.error("Erro ao buscar o restaurante:", profileError);
-        return;
-      }
-  
-      // Buscar os dados do restaurante usando o ID correto
-      const { data: restaurantData, error: restaurantError } = await supabase
-        .from("restaurants")
-        .select("*")
-        .eq("id", profile.restaurant_id)
-        .single();
-  
-      if (restaurantError) {
-        console.error("Erro ao buscar os dados do restaurante:", restaurantError);
-        return;
-      }
-  
-      setRestaurant(restaurantData);
+    if (!restaurant?.id) return;
+
+    // Configurar canal do Supabase Realtime
+    const channel = supabase
+      .channel(`restaurant-orders-${restaurant.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+          filter: `restaurant_id=eq.${restaurant.id}`
+        },
+        (payload) => {
+          // Atualização otimizada do estado
+          setOrders(current => {
+            if (payload.eventType === 'INSERT') {
+              return [payload.new, ...current];
+            }
+            if (payload.eventType === 'UPDATE') {
+              return current.map(order =>
+                order.id === payload.new.id ? payload.new : order
+              );
+            }
+            if (payload.eventType === 'DELETE') {
+              return current.filter(order => order.id !== payload.old.id);
+            }
+            return current;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
-  
-    fetchRestaurant();
-  }, []);
+  }, [restaurant?.id]);
+
+  const fetchOrders = async () => {
+    try {
+      // Verifica se o restaurante e o ID do restaurante estão definidos
+      if (!restaurant?.id) {
+        console.error("Restaurante não encontrado. Não foi possível buscar os pedidos.");
+        return;
+      }
+
+      // Busca os pedidos no Supabase
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('restaurant_id', restaurant.id); // Usa o ID do restaurante
+
+      if (error) throw error;
+
+      // Atualiza o estado com os pedidos
+      setOrders(data || []);
+    } catch (error) {
+      console.error("Erro ao buscar pedidos:", error);
+      toast({
+        title: "Erro ao buscar pedidos",
+        description: "Ocorreu um erro ao carregar os pedidos.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Busca os pedidos quando o restaurante é carregado
+  useEffect(() => {
+    if (restaurant?.id) {
+      fetchOrders();
+    }
+  }, [restaurant]); // Dependência: restaurant
+
+  const handleUpdateOrderStatus = async (orderId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Status do pedido atualizado!",
+        description: `O pedido foi marcado como ${status === 'completed' ? 'concluído' : 'pendente'}.`,
+      });
+
+      // Atualiza a lista de pedidos
+      fetchOrders();
+    } catch (error) {
+      console.error("Erro ao atualizar status do pedido:", error);
+      toast({
+        title: "Erro ao atualizar status",
+        description: "Ocorreu um erro ao atualizar o status do pedido.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const toggleItemActive = async (item: MenuItem) => {
     try {
@@ -164,8 +399,8 @@ const Admin = () => {
       const { data: menuItemsData, error: menuItemsError } = await supabase
         .from('menu_items')
         .select('*, category:categories(name)')
-        .eq('restaurant_id', restaurantId) // 🔹 Filtrando pelo restaurante correto
-        .order('order_itens'); // Ordenar por `order_itens`
+        .eq('restaurant_id', restaurantId)
+        .order('order_itens');
 
       if (menuItemsError) throw menuItemsError;
       setMenuItems(menuItemsData);
@@ -382,24 +617,10 @@ const Admin = () => {
     try {
       const updates = items.map((item, index) => ({
         id: item.id,
-        name: item.name, // Certifique-se de que 'name' está presente
-        price: item.price, // Adicione o campo 'price' ao objeto
-        order_itens: index, // Atualize a posição do item
+        name: item.name,
+        price: item.price,
+        order_itens: index,
       }));
-
-      // Verifique se algum item tem o campo 'name' ou 'price' faltando
-      const invalidItems = updates.filter(item => !item.name || item.price == null);
-      if (invalidItems.length > 0) {
-        console.error("Items com 'name' ou 'price' inválido:", invalidItems);
-        toast({
-          title: "Erro ao atualizar a ordem dos itens",
-          description: "Alguns itens não possuem nome ou preço válido.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log("Updates:", updates); // Verifique os dados que serão enviados
 
       const { error } = await supabase
         .from("menu_items")
@@ -420,9 +641,269 @@ const Admin = () => {
     }
   };
 
+  const generateTableQRCode = (tableNumber: number) => {
+    const id = uuidv4();
+    const token = uuidv4();
+    const newTable = {
+      id: id,
+      tableNumber: tableNumber,
+      token: token,
+    };
+  
+    setTables((prevTables) => [...prevTables, newTable]);
+    saveTableToDatabase(newTable);
+  };
+  
+  // Função para baixar QR Code (deve estar no nível do componente)
+  const handleDownloadQRCode = (tableNumber: number, token: string) => {
+    const canvas = document.createElement('canvas');
+    const qrCodeElement = document.querySelector(`#qr-code-table-${tableNumber}`) as HTMLElement;
+    
+    if (!qrCodeElement) return;
+  
+    const svg = qrCodeElement.querySelector('svg');
+    if (!svg) return;
+  
+    const svgData = new XMLSerializer().serializeToString(svg);
+    
+    // Aumentamos o tamanho do canvas para acomodar o texto abaixo do QR code
+    const canvasWidth = 300;
+    const canvasHeight = 350; // Altura maior para acomodar o texto
+    
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    const ctx = canvas.getContext('2d');
+  
+    if (!ctx) return;
+  
+    const img = new Image();
+    img.onload = () => {
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+      
+      // Desenha o QR code centralizado
+      ctx.drawImage(img, 0, 0, canvasWidth, 300);
+      
+      // Adiciona o texto abaixo (não sobre) o QR code
+      ctx.fillStyle = 'black';
+      ctx.font = 'bold 24px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Mesa ${tableNumber}`, canvasWidth / 2, 330);
+  
+      const pngFile = canvas.toDataURL('image/png');
+      const downloadLink = document.createElement('a');
+      downloadLink.download = `QRCode-Mesa-${tableNumber}.png`;
+      downloadLink.href = pngFile;
+      downloadLink.click();
+    };
+  
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+  };
+  
+  // Função melhorada para impressão de QR Code
+  const handlePrintQRCode = (tableNumber: number) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+  
+    const qrCodeElement = document.querySelector(`#qr-code-table-${tableNumber}`)?.innerHTML;
+    if (!qrCodeElement) return;
+  
+    printWindow.document.open();
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>QR Code Mesa ${tableNumber}</title>
+          <style>
+            body { 
+              display: flex; 
+              justify-content: center; 
+              align-items: center; 
+              height: 100vh; 
+              margin: 0; 
+              flex-direction: column; 
+              font-family: Arial, sans-serif;
+            }
+            .qr-container {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              padding: 20px;
+              border: 1px dashed #ccc;
+              border-radius: 8px;
+              margin-bottom: 20px;
+            }
+            .mesa-title {
+              font-size: 24px;
+              font-weight: bold;
+              margin-top: 15px;
+              margin-bottom: 0;
+            }
+            .qr-code {
+              width: 200px;
+              height: 200px;
+            }
+            @media print { 
+              body { height: auto; } 
+              .qr-container { break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="qr-container">
+            <div class="qr-code">${qrCodeElement}</div>
+            <p class="mesa-title">Mesa ${tableNumber}</p>
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                window.close();
+              }, 500);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+  
+  // Nova função para impressão de múltiplos QR codes
+  const handlePrintMultipleQRCodes = (selectedTables: number[]) => {
+    if (selectedTables.length === 0) return;
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
+    printWindow.document.open();
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>QR Codes das Mesas</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif;
+              margin: 20px;
+            }
+            .print-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 20px;
+            }
+            .qr-container {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              padding: 20px;
+              border: 1px dashed #ccc;
+              border-radius: 8px;
+              page-break-inside: avoid;
+            }
+            .mesa-title {
+              font-size: 24px;
+              font-weight: bold;
+              margin-top: 15px;
+              margin-bottom: 5px;
+            }
+            .qr-code {
+              width: 200px;
+              height: 200px;
+            }
+            @media print { 
+              body { margin: 0; } 
+              .print-grid { grid-template-columns: repeat(2, 1fr); }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-grid">
+    `);
+    
+    selectedTables.forEach(tableNumber => {
+      const qrCodeElement = document.querySelector(`#qr-code-table-${tableNumber}`)?.innerHTML;
+      if (qrCodeElement) {
+        printWindow.document.write(`
+          <div class="qr-container">
+            <div class="qr-code">${qrCodeElement}</div>
+            <p class="mesa-title">Mesa ${tableNumber}</p>
+          </div>
+        `);
+      }
+    });
+    
+    printWindow.document.write(`
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                window.close();
+              }, 500);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+const toggleSelectTable = (tableNumber: number) => {
+  setSelectedTables(prev =>
+    prev.includes(tableNumber)
+      ? prev.filter(t => t !== tableNumber)
+      : [...prev, tableNumber]
+  );
+};
+
+const toggleSelectMode = () => {
+  setSelectMode(prev => {
+    if (prev) setSelectedTables([]); // limpa seleção se desativar o modo
+    return !prev;
+  });
+};
+
+  
+  // Função para salvar mesa no banco de dados
+  const saveTableToDatabase = async (table: { id: string; tableNumber: number; token: string }) => {
+    try {
+      const restaurantId = restaurant?.id;
+  
+      if (!restaurantId) {
+        console.error("Restaurante não encontrado. Não foi possível salvar a mesa.");
+        return;
+      }
+  
+      const { error } = await supabase
+        .from('tables')
+        .insert([
+          {
+            id: table.id,
+            table_number: table.tableNumber,
+            token: table.token,
+            restaurant_id: restaurantId,
+          },
+        ]);
+  
+      if (error) throw error;
+  
+      toast({
+        title: "Mesa adicionada com sucesso!",
+      });
+    } catch (error) {
+      console.error("Erro ao salvar mesa:", error);
+      toast({
+        title: "Erro ao salvar mesa",
+        description: "Ocorreu um erro ao adicionar a mesa.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-4 sm:py-8 px-4 sm:px-6 md:px-8">
+        {/* Logo e Título "Painel Administrativo" */}
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 sm:mb-8">
           <div className="flex items-center gap-4">
             {restaurant?.logo_url && (
@@ -445,279 +926,417 @@ const Admin = () => {
             Sair
           </Button>
         </div>
+        {/* Navbar */}
+        <Navbar activeSection={activeSection} setActiveSection={setActiveSection} />
 
-        <div className="grid gap-6 sm:gap-8">
-          {/* Categories Section */}
-          <Card className="bg-background shadow-sm">
+        <div className="container mx-auto py-4 sm:py-8 px-4 sm:px-6 md:px-8">
+          {/* Seção de Produtos (Categorias e Itens do Cardápio) */}
+          {activeSection === "produtos" && (
+            <div className="grid gap-6 sm:gap-8">
+              {/* Seção de Categorias */}
+              <Card className="bg-background shadow-sm">
+                <CardHeader className="flex flex-col sm:flex-row items-center justify-between pb-3 sm:pb-4">
+                  <h2 className="text-xl sm:text-2xl font-semibold text-text mb-3 sm:mb-0">Categorias</h2>
+                  <Button
+                    onClick={() => {
+                      setSelectedCategory(undefined);
+                      setCategoryDialogOpen(true);
+                    }}
+                    className="w-full sm:w-auto"
+                    style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
+                  >
+                    Adicionar Categoria
+                  </Button>
+                </CardHeader>
+                <CardContent className="px-2 sm:px-6">
+                  <div className="overflow-x-auto -mx-2 sm:mx-0">
+                    <DragDropContext onDragEnd={onDragEndCategories}>
+                      <Droppable droppableId="categories">
+                        {(provided) => (
+                          <Table ref={provided.innerRef} {...provided.droppableProps} className="w-full">
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="text-text text-sm">Nome</TableHead>
+                                <TableHead className="text-text text-sm hidden sm:table-cell">Slug</TableHead>
+                                <TableHead className="text-text text-sm">Ações</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {categories.map((category, index) => (
+                                <Draggable key={category.id} draggableId={category.id.toString()} index={index}>
+                                  {(provided) => (
+                                    <TableRow
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      {...provided.dragHandleProps}
+                                      className="bg-background text-text"
+                                    >
+                                      <TableCell className="py-2 text-sm sm:text-base">{category.name}</TableCell>
+                                      <TableCell className="py-2 text-sm hidden sm:table-cell">{category.slug}</TableCell>
+                                      <TableCell className="py-2">
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="w-full sm:w-auto text-xs"
+                                            onClick={() => handleEditCategory(category)}
+                                            style={{ backgroundColor: 'var(--background)', color: 'var(--text)' }}
+                                          >
+                                            Editar
+                                          </Button>
+                                          <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            className="w-full sm:w-auto text-xs"
+                                            onClick={() => handleDeleteCategory(category)}
+                                            style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
+                                          >
+                                            Excluir
+                                          </Button>
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                </Draggable>
+                              ))}
+                              {provided.placeholder}
+                            </TableBody>
+                          </Table>
+                        )}
+                      </Droppable>
+                    </DragDropContext>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Seção de Itens do Cardápio */}
+              <Card className="bg-background shadow-sm">
+                <CardHeader className="flex flex-col sm:flex-row items-center justify-between pb-3 sm:pb-4">
+                  <h2 className="text-xl sm:text-2xl font-semibold text-text mb-3 sm:mb-0">Itens do Cardápio</h2>
+                  <Button
+                    onClick={() => {
+                      setSelectedMenuItem(undefined);
+                      setMenuItemDialogOpen(true);
+                    }}
+                    className="w-full sm:w-auto"
+                    style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
+                  >
+                    Adicionar Item
+                  </Button>
+                </CardHeader>
+                <CardContent className="px-2 sm:px-6">
+                  <Accordion type="single" collapsible value={openCategory} onValueChange={setOpenCategory} className="w-full">
+                    {groupedMenuItems.map((category) => (
+                      <AccordionItem key={category.id} value={category.id.toString()}>
+                        <AccordionTrigger className="px-2">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-1 sm:gap-0">
+                            <span className="text-text font-medium">{category.name}</span>
+                            <span className="text-xs sm:text-sm text-text opacity-80">{category.items.length} itens</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="overflow-x-auto -mx-2 sm:mx-0">
+                            <DragDropContext onDragEnd={onDragEndItems}>
+                              <Droppable droppableId={category.id.toString()}>
+                                {(provided) => (
+                                  <Table ref={provided.innerRef} {...provided.droppableProps} className="w-full">
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead className="text-text text-sm">Nome</TableHead>
+                                        <TableHead className="text-text text-sm">Preço</TableHead>
+                                        <TableHead className="text-text text-sm hidden sm:table-cell">Status</TableHead>
+                                        <TableHead className="text-text text-sm">Ações</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {category.items.map((item, index) => (
+                                        <Draggable key={item.id} draggableId={item.id.toString()} index={index}>
+                                          {(provided) => (
+                                            <TableRow
+                                              ref={provided.innerRef}
+                                              {...provided.draggableProps}
+                                              {...provided.dragHandleProps}
+                                              className={!item.active ? "opacity-60 bg-background text-text" : "bg-background text-text"}
+                                            >
+                                              <TableCell className="py-2 text-sm sm:text-base">{item.name}</TableCell>
+                                              <TableCell className="py-2 text-sm whitespace-nowrap">
+                                                {new Intl.NumberFormat("pt-BR", {
+                                                  style: "currency",
+                                                  currency: "BRL",
+                                                }).format(item.price)}
+                                              </TableCell>
+                                              <TableCell className="py-2 hidden sm:table-cell">
+                                                <span
+                                                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${item.active
+                                                    ? "bg-green-100 text-green-800"
+                                                    : "bg-gray-100 text-gray-800"
+                                                    }`}
+                                                >
+                                                  {item.active ? "Ativo" : "Desativado"}
+                                                </span>
+                                              </TableCell>
+                                              <TableCell className="py-2">
+                                                <div className="flex flex-col sm:flex-row gap-2">
+                                                  <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="w-full sm:w-auto text-xs"
+                                                    onClick={() => handleEditMenuItem(item)}
+                                                    style={{ backgroundColor: 'var(--background)', color: 'var(--text)' }}
+                                                  >
+                                                    Editar
+                                                  </Button>
+                                                  <Button
+                                                    variant={item.active ? "secondary" : "default"}
+                                                    size="sm"
+                                                    className="w-full sm:w-auto text-xs"
+                                                    onClick={() => toggleItemActive(item)}
+                                                    style={{ backgroundColor: item.active ? 'var(--primary)' : 'var(--background)', color: item.active ? 'var(--background)' : 'var(--text)' }}
+                                                  >
+                                                    {item.active ? "Desativar" : "Ativar"}
+                                                  </Button>
+                                                  <Button
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    className="w-full sm:w-auto text-xs"
+                                                    onClick={() => handleDeleteMenuItem(item)}
+                                                    style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
+                                                  >
+                                                    Excluir
+                                                  </Button>
+                                                </div>
+                                              </TableCell>
+                                            </TableRow>
+                                          )}
+                                        </Draggable>
+                                      ))}
+                                      {provided.placeholder}
+                                    </TableBody>
+                                  </Table>
+                                )}
+                              </Droppable>
+                            </DragDropContext>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Seção de Mesas - QR Code */}
+          {activeSection === "mesas" && (
+            <Card className="bg-background shadow-sm mt-6">
             <CardHeader className="flex flex-col sm:flex-row items-center justify-between pb-3 sm:pb-4">
-              <h2 className="text-xl sm:text-2xl font-semibold text-text mb-3 sm:mb-0">Categorias</h2>
-              <Button
-                onClick={() => {
-                  setSelectedCategory(undefined);
-                  setCategoryDialogOpen(true);
-                }}
-                className="w-full sm:w-auto"
-                style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
-              >
-                Adicionar Categoria
-              </Button>
+              <h2 className="text-xl sm:text-2xl font-semibold text-text mb-3 sm:mb-0">Mesas</h2>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button
+                  onClick={() => {
+                    const tableNumber = tables.length + 1;
+                    generateTableQRCode(tableNumber);
+                  }}
+                  className="w-full sm:w-auto"
+                  style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
+                >
+                  Adicionar Mesa
+                </Button>
+                <Button
+                  onClick={toggleSelectMode}
+                  variant={selectMode ? "default" : "outline"}
+                  className="w-full sm:w-auto"
+                >
+                  {selectMode ? "Cancelar Seleção" : "Selecionar Múltiplos"}
+                </Button>
+                {selectMode && selectedTables.length > 0 && (
+                  <Button
+                    onClick={() => handlePrintMultipleQRCodes(selectedTables)}
+                    className="w-full sm:w-auto"
+                    style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
+                  >
+                    Imprimir {selectedTables.length} Selecionados
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="px-2 sm:px-6">
-              <div className="overflow-x-auto -mx-2 sm:mx-0">
-                <DragDropContext onDragEnd={onDragEndCategories}>
-                  <Droppable droppableId="categories">
-                    {(provided) => (
-                      <Table ref={provided.innerRef} {...provided.droppableProps} className="w-full">
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="text-text text-sm">Nome</TableHead>
-                            <TableHead className="text-text text-sm hidden sm:table-cell">Slug</TableHead>
-                            <TableHead className="text-text text-sm">Ações</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {categories.map((category, index) => (
-                            <Draggable key={category.id} draggableId={category.id.toString()} index={index}>
-                              {(provided) => (
-                                <TableRow
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                  className="bg-background text-text"
-                                >
-                                  <TableCell className="py-2 text-sm sm:text-base">{category.name}</TableCell>
-                                  <TableCell className="py-2 text-sm hidden sm:table-cell">{category.slug}</TableCell>
-                                  <TableCell className="py-2">
-                                    <div className="flex flex-col sm:flex-row gap-2">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="w-full sm:w-auto text-xs"
-                                        onClick={() => handleEditCategory(category)}
-                                        style={{ backgroundColor: 'var(--background)', color: 'var(--text)' }}
-                                      >
-                                        Editar
-                                      </Button>
-                                      <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        className="w-full sm:w-auto text-xs"
-                                        onClick={() => handleDeleteCategory(category)}
-                                        style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
-                                      >
-                                        Excluir
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                        </TableBody>
-                      </Table>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {[...tables].sort((a, b) => a.tableNumber - b.tableNumber).map((table) => (
+                  <div
+                    key={table.id}
+                    onClick={() => selectMode && toggleSelectTable(table.tableNumber)}
+                    className={`flex flex-col items-center justify-center p-4 bg-white rounded-lg shadow-md relative group
+                      ${selectMode ? 'cursor-pointer hover:bg-gray-50' : ''}
+                      ${selectMode && selectedTables.includes(table.tableNumber) ? 'ring-2 ring-primary bg-primary/10' : ''}
+                    `}
+                  >
+                    {selectMode && (
+                      <div className="absolute top-2 right-2">
+                        <input 
+                          type="checkbox" 
+                          checked={selectedTables.includes(table.tableNumber)}
+                          readOnly
+                          className="h-5 w-5 accent-primary"
+                        />
+                      </div>
                     )}
-                  </Droppable>
-                </DragDropContext>
+                    <div id={`qr-code-table-${table.tableNumber}`}>
+                      <QRCodeSVG
+                        value={`https://c471-170-239-226-180.ngrok-free.app/${restaurant?.slug || 'seu-restaurante'}/${table.token}`}
+                        size={160}
+                      />
+                    </div>
+                    <p className="mt-3 text-base font-bold text-text">Mesa {table.tableNumber}</p>
+      
+                    {/* Botões de ação */}
+                    {!selectMode && (
+                      <div className="flex gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownloadQRCode(table.tableNumber, table.token);
+                          }}
+                        >
+                          Baixar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePrintQRCode(table.tableNumber);
+                          }}
+                        >
+                          Imprimir
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
+          )}
 
-          {/* Menu Items Section */}
-          <Card className="bg-background shadow-sm">
-            <CardHeader className="flex flex-col sm:flex-row items-center justify-between pb-3 sm:pb-4">
-              <h2 className="text-xl sm:text-2xl font-semibold text-text mb-3 sm:mb-0">Itens do Cardápio</h2>
+          {/* Seção de Ordem de Pedidos */}
+          {activeSection === "pedidos" && (
+            <>
+              <Card className="bg-background shadow-sm mt-6">
+
+                <OrdersCard
+                  restaurantId={restaurant?.id}
+                  tables={tables}
+                  orders={orders}
+                  onOrderComplete={handleUpdateOrderStatus}
+                />
+
+              </Card>
+
+              {/* Seção de Pedidos por Mesa */}
+              <Card className="bg-background shadow-sm mt-6">
+                <CardHeader className="flex flex-col sm:flex-row items-center justify-between pb-3 sm:pb-4">
+                  <h2 className="text-xl sm:text-2xl font-semibold text-text mb-3 sm:mb-0">Pedidos por Mesa</h2>
+                </CardHeader>
+                <CardContent className="px-2 sm:px-6">
+                  <TableOrders
+                    orders={orders}
+                    tables={tables}
+                    onUpdateOrderStatus={handleUpdateOrderStatus}
+                    onTableFinalized={(tableToken) => handleFinalizeTable(tableToken, fetchOrders)}
+                    restaurantId={restaurant?.id}
+                  />
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {/* Seção de Cardápio - QR Code */}
+          {activeSection === "cardapio" && (
+            <div className="mt-6">
               <Button
-                onClick={() => {
-                  setSelectedMenuItem(undefined);
-                  setMenuItemDialogOpen(true);
-                }}
-                className="w-full sm:w-auto"
+                onClick={() => setShowQRCode(!showQRCode)}
+                className="w-full sm:w-auto bg-primary text-primary"
                 style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
               >
-                Adicionar Item
+                {showQRCode ? "Ocultar QR Code" : "Mostrar QR Code"}
               </Button>
-            </CardHeader>
-            <CardContent className="px-2 sm:px-6">
-              <Accordion type="single" collapsible value={openCategory} onValueChange={setOpenCategory} className="w-full">
-                {groupedMenuItems.map((category) => (
-                  <AccordionItem key={category.id} value={category.id.toString()}>
-                    <AccordionTrigger className="px-2">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-1 sm:gap-0">
-                        <span className="text-text font-medium">{category.name}</span>
-                        <span className="text-xs sm:text-sm text-text opacity-80">{category.items.length} itens</span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="overflow-x-auto -mx-2 sm:mx-0">
-                        <DragDropContext onDragEnd={onDragEndItems}>
-                          <Droppable droppableId={category.id.toString()}>
-                            {(provided) => (
-                              <Table ref={provided.innerRef} {...provided.droppableProps} className="w-full">
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead className="text-text text-sm">Nome</TableHead>
-                                    <TableHead className="text-text text-sm">Preço</TableHead>
-                                    <TableHead className="text-text text-sm hidden sm:table-cell">Status</TableHead>
-                                    <TableHead className="text-text text-sm">Ações</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {category.items.map((item, index) => (
-                                    <Draggable key={item.id} draggableId={item.id.toString()} index={index}>
-                                      {(provided) => (
-                                        <TableRow
-                                          ref={provided.innerRef}
-                                          {...provided.draggableProps}
-                                          {...provided.dragHandleProps}
-                                          className={!item.active ? "opacity-60 bg-background text-text" : "bg-background text-text"}
-                                        >
-                                          <TableCell className="py-2 text-sm sm:text-base">{item.name}</TableCell>
-                                          <TableCell className="py-2 text-sm whitespace-nowrap">
-                                            {new Intl.NumberFormat("pt-BR", {
-                                              style: "currency",
-                                              currency: "BRL",
-                                            }).format(item.price)}
-                                          </TableCell>
-                                          <TableCell className="py-2 hidden sm:table-cell">
-                                            <span
-                                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${item.active
-                                                ? "bg-green-100 text-green-800"
-                                                : "bg-gray-100 text-gray-800"
-                                                }`}
-                                            >
-                                              {item.active ? "Ativo" : "Desativado"}
-                                            </span>
-                                          </TableCell>
-                                          <TableCell className="py-2">
-                                            <div className="flex flex-col sm:flex-row gap-2">
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="w-full sm:w-auto text-xs"
-                                                onClick={() => handleEditMenuItem(item)}
-                                                style={{ backgroundColor: 'var(--background)', color: 'var(--text)' }}
-                                              >
-                                                Editar
-                                              </Button>
-                                              <Button
-                                                variant={item.active ? "secondary" : "default"}
-                                                size="sm"
-                                                className="w-full sm:w-auto text-xs"
-                                                onClick={() => toggleItemActive(item)}
-                                                style={{ backgroundColor: item.active ? 'var(--primary)' : 'var(--background)', color: item.active ? 'var(--background)' : 'var(--text)' }}
-                                              >
-                                                {item.active ? "Desativar" : "Ativar"}
-                                              </Button>
-                                              <Button
-                                                variant="destructive"
-                                                size="sm"
-                                                className="w-full sm:w-auto text-xs"
-                                                onClick={() => handleDeleteMenuItem(item)}
-                                                style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
-                                              >
-                                                Excluir
-                                              </Button>
-                                            </div>
-                                          </TableCell>
-                                        </TableRow>
-                                      )}
-                                    </Draggable>
-                                  ))}
-                                  {provided.placeholder}
-                                </TableBody>
-                              </Table>
-                            )}
-                          </Droppable>
-                        </DragDropContext>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Dialogs */}
-        <CategoryDialog
-          open={categoryDialogOpen}
-          onOpenChange={setCategoryDialogOpen}
-          category={selectedCategory}
-          onSuccess={fetchData}
-        />
-        <MenuItemDialog
-          open={menuItemDialogOpen}
-          onOpenChange={setMenuItemDialogOpen}
-          menuItem={selectedMenuItem}
-          categories={categories}
-          onSuccess={fetchData}
-        />
-
-        {/* Alert Dialog - Versão com melhor contraste e visibilidade */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent className="bg-white max-w-md mx-auto border-2 border-gray-300 shadow-xl rounded-lg">
-            <AlertDialogHeader className="pb-3">
-              <AlertDialogTitle className="text-red-600 text-xl font-bold flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                  <line x1="12" y1="9" x2="12" y2="13"></line>
-                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                </svg>
-                Confirmar exclusão
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-gray-800 mt-3 text-base">
-                {categoryToDelete !== null
-                  ? "Tem certeza que deseja excluir esta categoria? Esta ação removerá todos os itens associados."
-                  : "Tem certeza que deseja excluir este item do cardápio?"}
-                <p className="mt-2 font-medium text-red-600 text-base">Esta ação não pode ser desfeita.</p>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="flex-col sm:flex-row gap-3 pt-4 border-t border-gray-300 mt-4">
-              <AlertDialogCancel
-                className="bg-gray-100 text-gray-800 border border-gray-400 hover:bg-gray-200 transition-colors w-full sm:w-auto rounded-md font-medium text-base"
-              >
-                Cancelar
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={categoryToDelete !== null ? confirmDeleteCategory : confirmDeleteMenuItem}
-                className="bg-red-600 text-white hover:bg-red-700 transition-colors w-full sm:w-auto rounded-md flex items-center justify-center font-medium text-base"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                  <path d="M3 6h18"></path>
-                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                </svg>
-                Confirmar Exclusão
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        {/* QR Code Button - Updated with text-primary */}
-        <Button
-          onClick={() => setShowQRCode(!showQRCode)}
-          className="mt-6 w-full sm:w-auto bg-primary text-primary"
-          style={{ backgroundColor: 'var(--primary)', color: 'var(--background)' }}
-        >
-          {showQRCode ? "Ocultar QR Code" : "Mostrar QR Code"}
-        </Button>
-
-        <AnimatePresence>
-          {showQRCode && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ duration: 0.3 }}
-              className="mt-4 flex justify-center"
-            >
-              <QRCodeGenerator />
-            </motion.div>
+              <AnimatePresence>
+                {showQRCode && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    transition={{ duration: 0.3 }}
+                    className="mt-4 flex justify-center"
+                  >
+                    <QRCodeGenerator />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           )}
-        </AnimatePresence>
+
+          {/* Dialogs e Alertas */}
+          <CategoryDialog
+            open={categoryDialogOpen}
+            onOpenChange={setCategoryDialogOpen}
+            category={selectedCategory}
+            onSuccess={fetchData}
+          />
+          <MenuItemDialog
+            open={menuItemDialogOpen}
+            onOpenChange={setMenuItemDialogOpen}
+            menuItem={selectedMenuItem}
+            categories={categories}
+            onSuccess={fetchData}
+          />
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent className="bg-white max-w-md mx-auto border-2 border-gray-300 shadow-xl rounded-lg">
+              <AlertDialogHeader className="pb-3">
+                <AlertDialogTitle className="text-red-600 text-xl font-bold flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                  </svg>
+                  Confirmar exclusão
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-gray-800 mt-3 text-base">
+                  {categoryToDelete !== null
+                    ? "Tem certeza que deseja excluir esta categoria? Esta ação removerá todos os itens associados."
+                    : "Tem certeza que deseja excluir este item do cardápio?"}
+                  <p className="mt-2 font-medium text-red-600 text-base">Esta ação não pode ser desfeita.</p>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="flex-col sm:flex-row gap-3 pt-4 border-t border-gray-300 mt-4">
+                <AlertDialogCancel
+                  className="bg-gray-100 text-gray-800 border border-gray-400 hover:bg-gray-200 transition-colors w-full sm:w-auto rounded-md font-medium text-base"
+                >
+                  Cancelar
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={categoryToDelete !== null ? confirmDeleteCategory : confirmDeleteMenuItem}
+                  className="bg-red-600 text-white hover:bg-red-700 transition-colors w-full sm:w-auto rounded-md flex items-center justify-center font-medium text-base"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                  </svg>
+                  Confirmar Exclusão
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
     </div>
   );
-}
+};
 
 export default Admin;
