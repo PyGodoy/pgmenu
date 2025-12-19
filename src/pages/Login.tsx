@@ -17,17 +17,27 @@ const Login = () => {
   // Check if user is already logged in
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', session.user.id)
-          .single();
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          // Removido .single() e adicionado tratamento
+          const { data: profiles, error } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', session.user.id);
 
-        if (profile?.is_admin) {
-          navigate('/admin');
+          if (error) {
+            console.error('Erro ao buscar perfil:', error);
+            return;
+          }
+
+          // Verifica se encontrou o perfil
+          if (profiles && profiles.length > 0 && profiles[0]?.is_admin) {
+            navigate('/admin');
+          }
         }
+      } catch (error) {
+        console.error('Erro ao verificar sessão:', error);
       }
     };
     
@@ -46,16 +56,25 @@ const Login = () => {
 
       if (error) throw error;
 
-      // Check if user is admin
-      const { data: profile, error: profileError } = await supabase
+      // Check if user is admin - SEM .single()
+      const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('is_admin')
-        .eq('id', data.user.id)
-        .single();
+        .eq('id', data.user.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Erro ao buscar perfil:', profileError);
+        throw new Error('Erro ao verificar permissões do usuário');
+      }
 
-      if (!profile?.is_admin) {
+      // Verifica se o perfil existe
+      if (!profiles || profiles.length === 0) {
+        await supabase.auth.signOut();
+        throw new Error('Perfil de usuário não encontrado');
+      }
+
+      // Verifica se é admin
+      if (!profiles[0]?.is_admin) {
         await supabase.auth.signOut();
         throw new Error('Acesso não autorizado. Apenas administradores podem fazer login.');
       }
@@ -73,7 +92,6 @@ const Login = () => {
         variant: "destructive",
       });
       
-      // Clear password field on error
       setPassword('');
     } finally {
       setLoading(false);
@@ -93,7 +111,6 @@ const Login = () => {
     setResetLoading(true);
     
     try {
-      // Configura a URL de redirecionamento para a página de redefinição de senha
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
